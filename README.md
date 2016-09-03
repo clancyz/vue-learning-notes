@@ -5,13 +5,14 @@ My note of learning Vue.js
 ## 0.1.0
 
 ### 16/9/2
-- initial setup [83fac01](https://github.com/vuejs/vue/tree/83fac017f96f34c92c3578796a7ddb443d4e1f17)
+
+#### initial setup [83fac01](https://github.com/vuejs/vue/tree/83fac017f96f34c92c3578796a7ddb443d4e1f17)
 
 `Vue` 最初的名字叫 `element` 。
     
 ---
     
-- rename [871ed91](https://github.com/vuejs/vue/tree/871ed9126639c9128c18bb2f19e6afd42c0c5ad9)
+#### rename [871ed91](https://github.com/vuejs/vue/tree/871ed9126639c9128c18bb2f19e6afd42c0c5ad9)
 
 改名叫 `seed` ，初期思路的尝试。
     
@@ -31,21 +32,21 @@ My note of learning Vue.js
 
 ```js
 Object.defineProperty(data, variable, {
-	set: function (newVal) {
-	    // 赋值时设定binding, 改动dom
-	    [].forEach.call(bindings[variable].els, function (e) {
-	        bindings[variable].value = e.textContent = newVal
-	    })
-	},
-	get: function () {
-	    return bindings[variable].value
-	}
+    set: function (newVal) {
+        // 赋值时设定binding, 改动dom
+        [].forEach.call(bindings[variable].els, function (e) {
+            bindings[variable].value = e.textContent = newVal
+        })
+    },
+    get: function () {
+        return bindings[variable].value
+    }
 })
 ```
     
 ---
 
-- naive implementation [a5e27b1](https://github.com/vuejs/vue/tree/a5e27b1174e9196dcc9dbb0becc487275ea2e84c)
+- naive implementation [a5e27b1](https://github.com/vuejs/vue/commit/a5e27b1174e9196dcc9dbb0becc487275ea2e84c)
  
 初期的实现，作者当时ms在参考 [Rivets.js](https://github.com/mikeric/rivets) 
 
@@ -104,11 +105,93 @@ D-->E(对所有key做get/set处理)
 }
 ```
 
-    
+最后，从`TODO`中可以了解作者的思路：
+
+- nested levels by parsing dot syntax (which means nested getter/setters...)
+
+例如在传
+
+```js
+new Seed(dom, {
+    'msg.wow': 'hello'
+})
+```
+
+的情况下，即有nested getter/setter
+
+- repeat directive by watching an array： 这个应该是 `v-for` 之类的遍历数组了
+- parse textNodes：不知道要干嘛
+- make Seeds compositable：可以mixin?
+- formatter arguments: 不知道要干嘛
+- Seed.extend(): 组件化
+- options to pass in templates to Seed.create()：new Seed(arguments)
+
     
 ---
     
-  
+### 16/9/3
+
+#### filter value should not be written [3eb7f6f](https://github.com/vuejs/vue/commit/3eb7f6fc72f40ac43aa502e2e8cf70404a490b11)
+
+#### dump, destroy, fix filters [ec39439](https://github.com/vuejs/vue/commit/ec394395569ea81e50209b9e241e789cfacde588)
+
+修了个bug,就是用户原始传入的值被`filter`处理后，是需要保持原值的，`filter`处理的是值的副本。
+
+`Seed`构造函数加入 `dump` 和 `destroy`
+
+---
+
+
+#### refrator [cf1732b](https://github.com/vuejs/vue/commit/cf1732bea21dcc1637d587d295d534535a92d2b7)
+
+把内置指令的parse/具体方法划分为 `directive.js`和 `directives.js`
+
+做了 `this` 的绑定
+
+`class`和 `repeat` 暂时还没有实现 
+
+#### augmentArray seems to work [154861f](https://github.com/vuejs/vue/commit/cf1732bea21dcc1637d587d295d534535a92d2b7)
+
+覆写了`Array.prototype.push`方法，push时进行mutate,做到**数组长度改变时的监听**
+
+```js
+function augmentArray (collection, directive) {
+    collection.push = function (element) {
+        push.call(this, arguments)
+        directive.mutate({
+            event: 'push',
+            elements: slice.call(arguments),
+            collection: collection
+        })
+    }
+}
+```
+
+再看这一段
+
+```
+<div id="test" sd-on-click="changeMessage | delegate .button">
+...
+</div>
+```
+
+filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这个有兼容性问题，待后续看解决方案是`polyfill`还是其他。
+
+```js
+delegate: function (handler, selectors) {
+        return function (e) {
+            var match = selectors.every(function (selector) {
+                return e.target.webkitMatchesSelector(selector)
+            })
+            if (match) handler.apply(this, arguments)
+        }
+    }
+```
+
+
+
+ 
+
     
 
 
