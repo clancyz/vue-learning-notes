@@ -4,7 +4,7 @@ My note of learning Vue.js
 
 ## 0.1.0
 
-### 16/9/2
+
 
 #### initial setup [83fac01](https://github.com/vuejs/vue/tree/83fac017f96f34c92c3578796a7ddb443d4e1f17)
 
@@ -26,7 +26,7 @@ My note of learning Vue.js
 
 同时维护一个 `bindings` 变量，存储所有 `{{}}` 中的绑定变量，如 `msg`
 
-对 `msg` 维护一个`els`的属性，使用 `document.queryselectAll` 和前面parse后的html中的selector（即 `data-element-binding="msg"`） 拿到所有DOM，存入。然后删除 `data-element-binding` 这个属性。
+对 `msg` 维护一个`els`的属性，使用 `document.queryselectAll("[data-element-binding=*]")`  拿到所有DOM，存入。然后删除 `data-element-binding` 这个属性。
 
 使用 `Object.defineProperty` 中的 `set` 钩子完成`值 -> dom` 的**单向绑定**。
 
@@ -120,16 +120,14 @@ new Seed(dom, {
 的情况下，即有nested getter/setter
 
 - repeat directive by watching an array： 这个应该是 `v-for` 之类的遍历数组了
-- parse textNodes：不知道要干嘛
+- parse textNodes：对TextNode进行特珠处理
 - make Seeds compositable：可以mixin?
 - formatter arguments: 不知道要干嘛
-- Seed.extend(): 组件化
+- Seed.extend(): 创建一个新实例
 - options to pass in templates to Seed.create()：new Seed(arguments)
 
     
 ---
-    
-### 16/9/3
 
 #### filter value should not be written [3eb7f6f](https://github.com/vuejs/vue/commit/3eb7f6fc72f40ac43aa502e2e8cf70404a490b11)
 
@@ -149,6 +147,8 @@ new Seed(dom, {
 做了 `this` 的绑定
 
 `class`和 `repeat` 暂时还没有实现 
+
+---
 
 #### augmentArray seems to work [154861f](https://github.com/vuejs/vue/commit/cf1732bea21dcc1637d587d295d534535a92d2b7)
 
@@ -175,7 +175,7 @@ function augmentArray (collection, directive) {
 </div>
 ```
 
-filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这个有兼容性问题，待后续看解决方案是`polyfill`还是其他。
+filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这里有bug, `e.target !== e.currentTarget` 时需要往`parentNode`上继续检测的嘛，而且`matches`有兼容性问题，待后续看解决方案是`polyfill`还是其他。
 
 ```js
 delegate: function (handler, selectors) {
@@ -187,6 +187,156 @@ delegate: function (handler, selectors) {
         }
     }
 ```
+
+---
+
+#### WIP [79760c0](https://github.com/vuejs/vue/commit/79760c09d50caca7ca27cd85991eb2c6e9ba3231)
+
+抽离设置到`config.js`
+`filter.js` 当filter函数没定义时throw Error
+
+数组的监听方面，监听了几个常用的方法, 做本职工作的同时加入`callback`
+
+```js
+var proto = Array.prototype,
+    slice = proto.slice,
+    mutatorMethods = [
+        'pop',
+        'push',
+        'reverse',
+        'shift',
+        'unshift',
+        'splice',
+        'sort'
+    ]
+
+module.exports = function (arr, callback) {
+
+    mutatorMethods.forEach(function (method) {
+        arr[method] = function () {
+            proto[method].apply(this, arguments)
+            callback({
+                event: method,
+                args: slice.call(arguments),
+                array: arr
+            })
+        }
+    })
+
+}
+```
+
+`main.js` 只作为一个入口点，主要逻辑移到了`seed.js`
+
+
+---
+
+#### refractor [5ce3b82](https://github.com/vuejs/vue/commit/5ce3b82b91a134f57dd1dffe8553cec369a56c70)
+
+`sd-repeat` --> `sd-each`
+
+引入`Seed.extend` 替换原来的 `Seed.seed`（ms原来这种命名感觉会绕晕），通过原型继承创建子组件
+
+作者打算写一个`todo` , 毕竟是MVVM的标准Demo...
+
+---
+
+#### kinda working now [952ab43](https://github.com/vuejs/vue/commit/952ab433a5a37f56ce95b06578b028ecdfdcad6c)
+
+作者在`todo.md`里面做的思考：
+
+- ? separate scope data and prototype methods // think about this
+
+`MVVM` 里面不可避免的会碰上 `nested scope` 。 如： 
+
+```html
+<parent>
+  <child>
+    <button sd-on-click="change" sd-text="hello">
+  </child>
+</parent>
+```
+
+那么问题是：比如parent 和 child 都有`change`方法，data中都有`hello`，应该用哪个？遍历dom树解析的时候如何解析？
+
+比如设定规则是只读取`child`的。那么如何实现这样的功能，甚至是一个 `isolated scope` ？
+
+这个任何一个`MVVM`框架都会做而且必须做。
+
+---
+
+#### sd-each-* works [3149839](https://github.com/vuejs/vue/commit/31498397366dc036911690e06670a1b0d1746654)
+
+实现了数组循环绑定。
+
+```
+<li sd-each-todo="todos">
+    <span class="todo" sd-text="todo.title" sd-class-done="todo.done"></span>   
+</li>
+```
+
+要实现循环绑定，那么按上面例子就需要插入n个span. 这里引入了一个`childSeed` ,当长度大于0时进行插入：
+
+```js
+function buildItem (data, index, collection) {
+    var node = this.el.cloneNode(true),
+        spore = new Seed(node, data, {
+            eachPrefixRE: this.prefixRE,
+            parentScope: this.seed.scope
+        })
+    this.container.insertBefore(node, this.marker)
+    collection[index] = spore.scope
+    return spore
+}
+```
+
+在`Seed.prototype._compileNode`中对`textnode`进行处理, `_compileTextNode`暂还未实现：
+
+```js
+if (node.nodeType === 3) {
+    // text node
+    self._compileTextNode(node)
+}
+```
+
+#### big refactor.. again [23a2bde](https://github.com/vuejs/vue/commit/23a2bde88917cd3f043beca4f5da3b37b0f9de29)
+
+重构狂魔的作者又搞出来一个`controller`的概念。。是否也受了ng的影响。。
+
+实际就是创建一个`Seed`新实例, 避免混淆
+
+```js
+Seed.controller = function (id, extensions) {
+    if (controllers[id]) {
+        console.warn('controller "' + id + '" was already registered and has been overwritten.')
+    }
+    var c = controllers[id] = Seed.extend(extensions)
+    return c
+}
+```
+
+原先的 `directive.js` 和 `directives.js` 显然看名字有点晕，所以改成了`binding.js`
+
+前面提到的：
+
+> filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这里有bug, `e.target !== e.currentTarget` 时需要往`parentNode`上继续检测的嘛，而且`matches`有兼容性问题，待后续看解决方案是`polyfill`还是其他。
+
+`filter.js`中的`deletegate`方法做了一个`delegateCheck` ，做冒泡遍历，修掉之前bug。
+
+`Seed.bootstrap` 对于`controller`做一个自检测，但是还未加入流程。
+
+---
+
+
+
+
+
+
+
+
+
+
+
 
 
 
