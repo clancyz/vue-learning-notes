@@ -120,7 +120,7 @@ new Seed(dom, {
 的情况下，即有nested getter/setter
 
 - repeat directive by watching an array： 这个应该是 `v-for` 之类的遍历数组了
-- parse textNodes：对TextNode进行特珠处理
+- parse textNodes：对TextNode进行特殊处理，比如{{hello}},转化成`dom attribute`效率还是比较低
 - make Seeds compositable：可以mixin?
 - formatter arguments: 不知道要干嘛
 - Seed.extend(): 创建一个新实例
@@ -259,7 +259,11 @@ module.exports = function (arr, callback) {
 
 那么问题是：比如parent 和 child 都有`change`方法，data中都有`hello`，应该用哪个？遍历dom树解析的时候如何解析？
 
-比如设定规则是只读取`child`的。那么如何实现这样的功能，甚至是一个 `isolated scope` ？
+假设我们希望`hello`是只读取`child`的,比较合情理。 
+
+那么有N个`child` 绑定 `change`事件呢？我们又希望能够做`delegate`绑到`parent`上去.....
+
+那么如何实现这样的功能，甚至是一个 `isolated scope` ？
 
 这个任何一个`MVVM`框架都会做而且必须做。
 
@@ -303,6 +307,8 @@ if (node.nodeType === 3) {
 
 重构狂魔的作者又搞出来一个`controller`的概念。。是否也受了ng的影响。。
 
+`controller` 主要就是解决 `scope nesting`的问题，这个版本还没实现
+
 实际就是创建一个`Seed`新实例, 避免混淆
 
 ```js
@@ -326,6 +332,69 @@ Seed.controller = function (id, extensions) {
 `Seed.bootstrap` 对于`controller`做一个自检测，但是还未加入流程。
 
 ---
+
+#### kinda work now except for scope nesting [62b75d4](https://github.com/vuejs/vue/commit/62b75d49838744f8b865064256c5f0f8df51616e)
+
+#### almost there! scope nesting [15ffaa4](https://github.com/vuejs/vue/commit/15ffaa4166f65ae62eb3ac64fa0ca83e1455bda2)
+
+`_compileTextNode` 方法做了实现：先match, 如果自己没有，去找`parentSeed`
+
+```
+<ul sd-show="todos">
+    <li class="todo"
+        sd-controller="Todo"
+        sd-each="todo:todos"
+        sd-class="done:todo.done"
+        sd-on="click:changeMessage, click:todo.toggle"
+        sd-text="msg"
+    ></li>
+</ul>
+```
+
+里面对于`nested scope`的实现：
+
+```js
+var key = bindingInstance.key,
+        epr = this._options.eachPrefixRE,
+        isEachKey = epr && epr.test(key),
+        scopeOwner = this
+    // TODO make scope chain work on nested controllers
+    if (isEachKey) {
+        key = key.replace(epr, '')
+    } else if (epr) {
+        scopeOwner = this._options.parentSeed
+    }
+```
+
+感觉现在这样的设计用起来还是有点囧的...必须要标注一下自己是属于哪个scope的
+
+---
+
+#### finally workssssss [08e7992](https://github.com/vuejs/vue/commit/08e7992c2a7fd0f686d2bf22205822dacf74b53f)
+
+还在解决 `nested scope`的问题。
+
+#### milestone reached, update todo [83665f9](https://github.com/vuejs/vue/commit/83665f9962d041378213bffb61647eff25e67a46)
+
+一个基本的`MVVM`已经实现了。但是原来的`nested scope`实现被作者自己否了。
+
+```js
+else if (ctrlExp && !root) { // nested controllers
+    // TODO need to be clever here!
+} 
+```
+
+`todo.md`
+
+- nested controllers - but how to inherit scope? 作者在思考作用域继承的问题。
+- improve arrayWatcher 
+- parse textNodes 
+- computed properties : computed properties的萌芽，天才的想法~
+
+---
+
+
+
 
 
 
