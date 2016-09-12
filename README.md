@@ -4,6 +4,20 @@ My note of learning Vue.js
 
 ## 0.1.0
 
+#### 初始设置 
+
+把依赖啥的都安装好，`component` 这个全局库**不能**使用最新版本否则执行`grunt task`时会报错 
+
+```
+$ npm i -g grunt 
+$ npm i -g component@0.16.3
+$ npm i
+$ component install component/emitter
+$ grunt
+
+```
+
+---
 
 
 #### initial setup [83fac01](https://github.com/vuejs/vue/tree/83fac017f96f34c92c3578796a7ddb443d4e1f17)
@@ -175,7 +189,7 @@ function augmentArray (collection, directive) {
 </div>
 ```
 
-filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这里有bug, `e.target !== e.currentTarget` 时需要往`parentNode`上继续检测的嘛，而且`matches`有兼容性问题，待后续看解决方案是`polyfill`还是其他。
+filter.js里面使用了`Element.prototype.matches` 来进行`事件代理` ，但是这里有bug, `e.target !== e.currentTarget` 时需要往`parentNode`上继续检测的嘛，~~而且`matches`有兼容性问题，待后续看解决方案是`polyfill`还是其他。~~
 
 ```js
 delegate: function (handler, selectors) {
@@ -187,6 +201,18 @@ delegate: function (handler, selectors) {
         }
     }
 ```
+
+PS: `Element.matches()` 支持情况, 原则上是可以`加前缀通用`的， 基本都已经支持。即使作`polyfill`也没啥。
+
+
+
+Feature | Chrome | Firefox (Gecko) | Internet Explorer | Opera | Safari (WebKit) 
+---|---|---|---|---|---
+Original support with a non-standard name | Yes | 3.6 (1.9.2) | 9.0 | 11.5 / 15.0 | 5.0 |
+Specified version | 34 | 34 | ? | 21.0 | 7.1 |
+
+此数据来自 [mozilla developer](https://developer.mozilla.org/en-US/docs/Web/API/Element/matches)
+
 
 ---
 
@@ -528,7 +554,7 @@ var ancestorKeyRE = /\^/g,
     rootKeyRE = /^\$/
 ```
 
-这里就是定义个while循环去match例如 `^^name` 这样的东西
+这里就是定义个while循环去match例如 `^^name` 这样的东西，找到最终的 `scopeOwner`
 
 ```js
 if (snr && !isEachKey) {
@@ -550,3 +576,178 @@ if (snr && !isEachKey) {
     }
 }
 ```
+
+---
+#### solved the setter init invoke [14d0cef](https://github.com/vuejs/vue/commit/14d0cefe6b65e03786eb9811fb39c741d8cd802e)
+
+干掉了统一初始化`scope`的`_dataCopy`属性相关代码, 
+
+```
+var binding = {
+    value: this.scope[key], // 原先的value是null
+    instances: []
+}             
+```
+
+```
+// set initial value
+  if (binding.value) {
+      directive.update(binding.value) // 初始化时使用这个value
+  }
+```
+
+
+---
+
+#### better unbind/destroy [6d81bff](https://github.com/vuejs/vue/commit/6d81bff63a38cd663afffb147d11ca00e38a42be)
+
+调用`unbind(true)`为`destroy`, 调用`unbind()`即为`unbind`
+
+```js
+unbind: function (rm) {
+    if (this.childSeeds.length) {
+        var fn = rm ? 'destroy' : 'unbind'
+        this.childSeeds.forEach(function (child) {
+            child[fn]()
+        })
+    }
+}
+```
+
+改进了`unbind`, 现在是完备的逻辑了
+
+```js
+Seed.prototype.unbind = function () {
+    var unbind = function (instance) {
+        if (instance.unbind) {
+            instance.unbind()
+        }
+    }
+    for (var key in this._bindings) {
+        this._bindings[key].instances.forEach(unbind)
+    }
+    this.childSeeds.forEach(function (child) {
+        child.unbind()
+    })
+}
+```
+
+作者同时在思考`delegate`的问题, 使用 `webkitMatchesSelector`不是长久之计~
+
+```js
+// TODO probably there's a better way.
+// Angular doesn't support delegation either
+// any real performance gain?
+delegate: function (handler, args) {
+    var selector = args[0]
+    return function (e) {
+        var oe = e.originalEvent,
+            target = delegateCheck(oe.target, oe.currentTarget, selector)
+        if (target) {
+            e.el = target
+            e.seed = target.seed
+            handler.call(this, e)
+        }
+    }
+}
+```
+
+---
+
+#### fix sd-on [8f79a10](https://github.com/vuejs/vue/commit/8f79a10b3684e63b52892caecd3a87d60427aa70)
+
+怒了，把`delegate`整个注掉了。
+
+
+---
+
+#### computed property progress [3d33458](https://github.com/vuejs/vue/commit/3d33458b601d3c1cf56f0db1e794acc2b161cd2e)
+
+要实现`computed property`就一定需要有`依赖解析`
+
+显然，`依赖解析`最简单的方法是`声明依赖` 
+
+like this:
+
+```
+Total: <span sd-text="total < todos"></span> |
+Remaining: <span sd-text="remaining"></span> |
+Completed: <span sd-text="completed < remaining total"></span>
+
+// computed properties
+scope.total = function () {
+    return scope.todos.length
+}
+
+scope.completed = function () {
+    return scope.todos.length - scope.remaining
+}
+```
+
+上述这种声明方式，声明了`total`依赖`todos`, `completed` 依赖 `remaining` 和 `total`
+
+但是这样对用户来说成本略高。
+
+这个版本中也还未实现调用`total`, `completed`这些声明函数去计算的逻辑。
+
+---
+
+#### event delegation in sd-each [5227248](https://github.com/vuejs/vue/commit/52272487400c22d1829b7a6efbb71483e84a3b7b)
+
+搞回`delegate`, 实现一个*matchSelector 的 `polyfill`
+
+`directives.js` 里面的 `on`,即指令`sd-on` 有以下逻辑
+
+> - bind时，如果是`sd-each`说明是循环，那么需要用`delegate`；定义当前的`selector`及`delegator(父元素)`
+> - update时，通过`delegateCheck`找到`delegator`中的`handler`并绑定`eventListener`；
+
+
+
+```js
+bind: function (handler) {
+    if (this.seed.each) {
+        this.selector = '[' + this.directiveName + '*="' + this.expression + '"]'
+        this.delegator = this.seed.el.parentNode
+    }
+},
+```
+
+但是现在的实现ms是有问题的，因为上面对`this.delegator`赋值的时候，dom还没有渲染完成，这时是没有`parentNode`的
+
+换句话说，`this.delegator`始终为`null`, 绑定的时机不太对。
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+    
+
+
+
+
+
+
+
+
