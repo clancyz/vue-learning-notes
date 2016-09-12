@@ -393,30 +393,160 @@ else if (ctrlExp && !root) { // nested controllers
 
 ---
 
+#### emitter [1d7a94e](https://github.com/vuejs/vue/commit/1d7a94ed1abfa5273d6071e1f1f1e2825d32b9a3)
+
+用到了[component/emitter](https://github.com/component/emitter), 让它作为`Seed.prototype` 的 `mixin`,
+用来做事件传递
+
+
+`seed.js`中：
+```js
+Emitter(Seed.prototype)
+```
+
+```js
+Seed.controller('Todo', function (scope, seed) {
+    scope.toggle = function () {
+        scope.done = !scope.done
+        seed.parentSeed.emit('toggle', seed)
+    }
+})
+```
+
+
+---
+
+#### todo demo kinda works [a6b7257](https://github.com/vuejs/vue/commit/a6b72570e22f5cfaaf7bc70e4e7a7dbf18ec23c0)
+
+`Binding` 统一改回 `Directive`
+
+`directives.js` 内置指令中加入了 `sd-checked`
+
+这个demo还不完整，`directives.js`中的`mutate` 中还未加相关逻辑，当数组长度改变时（如添加一个todo）并不能反馈到dom上。
+
+```js
+
+update: function (collection) {
+    if (this.childSeeds.length) {
+        this.childSeeds.forEach(function (child) {
+            child.destroy()
+        })
+        this.childSeeds = []
+    }
+    watchArray(collection, this.mutate.bind(this))
+    var self = this
+    collection.forEach(function (item, i) {
+        self.childSeeds.push(self.buildItem(item, i, collection))
+    })
+},
+mutate: function (mutation) {
+    console.log(mutation)
+}
+```
+
+---
+
+#### awesome [fcd9544](https://github.com/vuejs/vue/commit/fcd95440901fd33b7e795e383ea8669a763e3297)
+
+加入了内置指令 `sd-class`
+
+---
+
+#### 123 [16a4e05](https://github.com/vuejs/vue/commit/16a4e05a346960bef4b6bc9f5d875c3d4bef2cb5)
+
+#### stop jshint complaining [39760f4](https://github.com/vuejs/vue/commit/39760f49b7ac4a54be17c8f1c1803f581e7eba31) 
+
+没有实质内容
+
+---
+
+#### nested controllers [f1ed54b](https://github.com/vuejs/vue/commit/f1ed54bc84140b083964af12d3fc72c32fc8a085)
+
+作者现在思考在框架中应该包含的内容：
+
+- Template
+- Controller
+    - Nested Controllers and accessing parent scope
+    - Controller inheritance 
+- Data
+- Data Binding
+- Filters
+- Computed Properties
+- Custom Filter
+- Custom Directive
+
+接下来要做的内容：
+
+- complete arrayWatcher
+
+- computed properties (through invoking functions, need to rework the setter triggering mechanism using emitter)
+    - （computed properties 基于一个已声明的函数，这里呢就需要在`setter`里面计算依赖啊啥的）
+
+- the data object passed in should become an absolute source of truth, so multiple controllers can bind to the same data (i.e. second seed using it should insert dependency instead of overwriting it)
+    - （原始的`data`保留副本，可以让多个实例来用）
+
+- nested properties in scope (kinda hard but try)
+    - （nested properties 的确是比较tough的东西）
+
+- parse textNodes
 
 
 
+作者做了一下 `nested controllers` 的尝试
 
+```
+<div sd-controller="Grandpa">
+    <p sd-text="name"></p>
 
+    <div sd-controller="Dad">
+        <p><span sd-text="name"></span>, son of <span sd-text="^name"></span></p>
 
+        <div sd-controller="Son">
+            <p><span sd-text="name"></span>, son of <span sd-text="^name"></span></p>
 
+            <div sd-controller="Baby">
+                <p><span sd-text="name"></span>, son of <span sd-text="^name"></span>, grandson of <span sd-text="^^name"></span> and great-grandson of <span sd-text="$name"></span></p>
 
+            </div>
+        </div>
+    </div>
+</div>
+```
 
+作者定义的逻辑是这样的：
 
+> 
+> - name -> 自己的scope 
+> - ^name -> 父亲的scope
+> - ^^name -> 父亲的父亲的scope
+> - $name -> root scope 
 
+在这里，先定义了两个正则：
 
+```js
+var ancestorKeyRE = /\^/g,
+    rootKeyRE = /^\$/
+```
 
+这里就是定义个while循环去match例如 `^^name` 这样的东西
 
-
-
- 
-
-    
-
-
-
-
-
-
-
-
+```js
+if (snr && !isEachKey) {
+    scopeOwner = this.parentSeed
+} else {
+    var ancestors = key.match(ancestorKeyRE),
+        root      = key.match(rootKeyRE)
+    if (ancestors) {
+        key = key.replace(ancestorKeyRE, '')
+        var levels = ancestors.length
+        while (scopeOwner.parentSeed && levels--) {
+            scopeOwner = scopeOwner.parentSeed
+        }
+    } else if (root) {
+        key = key.replace(rootKeyRE, '')
+        while (scopeOwner.parentSeed) {
+            scopeOwner = scopeOwner.parentSeed
+        }
+    }
+}
+```
