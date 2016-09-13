@@ -771,3 +771,78 @@ Object.keys(mutationHandlers).forEach(function (method) {
 PS:作者的起名还是挺有意思的， `Seed` , `plant`， `spore` ...
 
 ---
+
+#### allow overwritting mutationHandlers [343ea29](https://github.com/vuejs/vue/commit/343ea299d0f10d39680b8da6651c3d3ab11ba21c)
+
+`mutationHandlers`可以被覆写。
+
+这是打算弄成api? 按目前的写法显然用户层是不能定义`mutationHandlers`的。而且显然不应该由用户来定义才对啊。。
+
+---
+
+#### better dep parsing [c4f31a5](https://github.com/vuejs/vue/commit/c4f31a5d65ad66fb2bf74612776444648609c0f6)
+
+检测一个`directive`是否有依赖其它`scope data`; 
+
+在这里引入了一个`parseKey` 函数来解析
+
+指令key的写法有几种，比如：
+
+- done:todo.done (sd-class)
+- change:toggleTodo (checkbox)
+- completed < remaining total （数据的关联计算）
+
+显然现在的声明式依赖只是用`<`符号来声明；于是便有：
+
+```js
+var DEPS_RE = /<[^<\|]+/g
+```
+
+这里需要避开连续两个`<`符号和声明`filter`的`|`号
+
+
+如 `completed < remaining total` 这个指令，最终这一段的执行重复利用了`parseKey`, 很优雅：
+
+```js
+var depExp = expression.match(DEPS_RE)
+    this.deps = depExp
+        ? depExp[0].slice(1).trim().split(/\s+/).map(parseKey)
+        : null
+// depExp === ["< remaining total"]
+// depExp[0].slice(1).trim().split(/\s+/)  --> ["remaining", "total"]
+// map(parseKey)之后得到this.deps
+```
+
+
+被解析后的结果：
+
+```
+this.deps = [{
+    arg: null,
+    key: 'remaining',
+    nesting: false,
+    root: false
+    }, {
+        arg: null,
+        key: 'total',
+        nesting: false,
+        root: false
+    }
+]
+```
+
+接下来是肯定要 do something的：
+
+```
+// computed properties
+ if (directive.deps) {
+        directive.deps.forEach(function (dep) {
+            console.log(dep)
+        })
+    }
+```
+
+PS：由用户来声明依赖的方式显然是需要重构的。慢慢看作者的思路。
+
+---
+
