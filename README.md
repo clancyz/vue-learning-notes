@@ -13,7 +13,7 @@ $ npm i -g grunt
 $ npm i -g component@0.16.3
 $ npm i
 $ component install component/emitter
-$ grunt
+$ grunt (--force)
 
 ```
 
@@ -632,7 +632,7 @@ Seed.prototype.unbind = function () {
 }
 ```
 
-作者同时在思考`delegate`的问题, 使用 `webkitMatchesSelector`不是长久之计~
+作者同时在思考`delegate`的问题。
 
 ```js
 // TODO probably there's a better way.
@@ -845,4 +845,129 @@ this.deps = [{
 PS：由用户来声明依赖的方式显然是需要重构的。慢慢看作者的思路。
 
 ---
+
+#### computed properties!!! [5acc8a2](https://github.com/vuejs/vue/commit/5acc8a2986c68f9d41baee7878c778d1b47c9f16)
+
+`parseKey`函数中加入了`nesting`和`root`的判断
+
+当依赖（即`directive.deps`）发生变化时调用 `Directive.prototype.refresh` 
+
+```js
+// called when a dependency has changed
+Directive.prototype.refresh = function () {
+    if (this.value) {
+        this._update(this.value.call(this.seed.scope))
+    }
+    if (this.binding.refreshDependents) {
+        this.binding.refreshDependents()
+    }
+}
+```
+
+```js
+// computed properties
+if (directive.deps) {
+    directive.deps.forEach(function (dep) {
+        var depScope = determinScope(dep, scope),
+            depBinding =
+                depScope._bindings[dep.key] ||
+                depScope._createBinding(dep.key)
+        if (!depBinding.dependents) {
+            depBinding.dependents = []
+            // 每个依赖发生变化时均会触发refresh()
+            depBinding.refreshDependents = function () {
+                depBinding.dependents.forEach(function (dept) {
+                    dept.refresh()
+                })
+            }
+        }
+        depBinding.dependents.push(directive)
+    })
+}
+```
+
+对于`watchArray`, 对数组加入了两个辅助方法`replace` 和 `remove`
+
+---
+
+#### todos [dc04a1a](https://github.com/vuejs/vue/commit/dc04a1af6908ce4ad4f89c232c8da0c38a1d92af)
+
+- parse textNodes
+- more directives / filters
+- nested properties in scope (kinda hard, maybe later)
+ 
+---
+
+#### complete todo example [7d12612](https://github.com/vuejs/vue/commit/7d126127e6c3c234e887c13d35e95aeafdc35de1)
+
+开始战斗力爆表...
+
+照例还是先看`todo`
+
+- parse textNodes?
+- method invoke with arguments
+- more directives / filters
+    - sd-if (终于出来了)
+    - sd-route (这是啥)
+- nested properties in scope (kinda hard, maybe later)
+
+
+`todos demo` 大改动，js,css啥的抽出来, 不得不说，css写得还是很有逼格的。。
+
+布局和[todomvc](https://github.com/tastejs/todomvc)差不多。
+
+
+默认指令添加了 `hide`, `focus`, `value`
+
+`filters`添加了常用的`keyCode`, 加入了`currency` 和 `key` 两个`filter`
+
+---
+
+#### jshint; [19b3926](https://github.com/vuejs/vue/commit/19b39263fce631df030a6259282eb3bafb053ff6)
+
+格式问题
+
+#### todo [f19e6c3](https://github.com/vuejs/vue/commit/f19e6c36f61ab92e62ded53954ecd93436784b98)
+
+- limited set of expressions (e.g. ternary operator)
+
+考虑在指令中支持更多的`expression`如`三目运算符`
+
+#### thoughts [c1c0b3a](https://github.com/vuejs/vue/commit/c1c0b3a036a110cffd351f8a6394b4e00796f8bc)
+
+`todo.md`中的思考:
+
+- getter setter should emit events
+- auto dependency extraction for computed properties (evaluate, record triggered getters)
+- use descriptor for computed properties
+
+
+`getter`和`setter`中做`emit`有啥用？暂时没有想到。。
+
+果然在考虑`自动收集依赖`。。
+
+另外`descriptor`（描述符）是个什么鬼。。
+
+今天先这样吧
+
+---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
