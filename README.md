@@ -719,35 +719,55 @@ bind: function (handler) {
 ---
 
 
+#### break directives into individual files [ca62c95](https://github.com/vuejs/vue/commit/ca62c95a4bbcbc37951eea598c10a88e8e50a549)
+
+拆分了`directives`到不同的文件 
+
+---
+
+#### arrayWatcher [88513c0](https://github.com/vuejs/vue/commit/88513c077d1ca494b075636aa6a6c76257e63f39)
 
 
+如前所述，对于数组的`mutation`需要做处理。这里定义了一个 `mutationHandlers`，做以下处理
 
+> - push: `self.buildItem` --> `self.container.insertBefore`
+> - pop: `pop` 拿出来的元素，当然是直接`$destroy`
+> - unshift: `self.buildItem` --> `self.container.insertBefore` --> `self.reorder` 很形象
+> - shift: `$destroy` --> `self.reorder` 
+> - splice: `$destroy` --> `self.container.insertBefore`
+> - sort: `selft.container.insertBefore`
 
+以`push`为例来梳理一下`arrayWatcher`的实现过程：
 
+> - 在scope中执行了push, 进入被watchArray覆写的push方法，执行push
+> - 覆写的push方法带着执行mutationHandler， 接着执行mutationHandler[push],传入三个参数：method,args,result
+> - 执行 `self.buildItem` , 通过 `cloneNode` 创建一个node
+> - 执行 `new Seed()` 创建一个新实例 `spore`, 绑定这个node
+> - 把这个`spore` 放到 负责`sd-each` 的 `directive`中的`collection`属性数组中, 这里当然不能再使用push了
+> - 执行dom操作 `self.container.insertBefore`
 
+对于 `push` 等不同的函数 `apply` 处理之后，得到的 `result` 显然是不一样的；在`mutationHandlers`里面也对 `result` 进行量身处理。
 
+```js
+Object.keys(mutationHandlers).forEach(function (method) {
+    arr[method] = function () {
+        var result = Array.prototype[method].apply(this, arguments)
+        callback({
+            method: method,
+            args: Array.prototype.slice.call(arguments),
+            result: result
+        })
+    }
+})
+```
 
+总之这些`arrayWatcher`实现还是挺优雅的。
 
+应该存在的问题是：
 
+- `Array`不止这些方法，是否全搞一次？
+- 性能问题
 
+PS:作者的起名还是挺有意思的， `Seed` , `plant`， `spore` ...
 
-
-
-
-
-
-
-
-
-
- 
-
-    
-
-
-
-
-
-
-
-
+---
