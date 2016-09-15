@@ -952,10 +952,42 @@ if (directive.deps) {
 
 ---
 
+#### use emitters [9a4e5d0](https://github.com/vuejs/vue/commit/9a4e5d035027d8ad570aca6006dd553c715bcde4)
 
+> `getter`和`setter`中做`emit`有啥用？暂时没有想到。。
 
+恩，在这个commit里面得到了解释，就是使用`Emmiter`来做事件监听啦。以这种`事件驱动`的方式来实现。
 
+例如：
 
+```js
+    var seed = this
+    Object.defineProperty(this.scope, key, {
+        get: function () {
+            seed.emit('get', key)
+            return binding.value
+        },
+        set: function (value) {
+            if (value === binding.value) return
+            seed.emit('set', key, value)
+        }
+    })
+
+    ...
+
+ // update bindings when a property is set
+    this.on('set', this._updateBinding.bind(this))
+```
+
+---
+
+#### sourceURLs for dev, reverse value [f6d6bba](https://github.com/vuejs/vue/commit/f6d6bba70d8715a49ced83b8c4db06fec4d2cf79)
+
+grunt的工作，uglify & source mapping 
+
+增加对 `!` 取非操作的逻辑。
+
+---
 
 
 
