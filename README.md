@@ -989,6 +989,159 @@ grunt的工作，uglify & source mapping
  
 ---
 
+#### add simple example & manual refresh of computed properties [67ff344](https://github.com/vuejs/vue/commit/67ff3448109104fe0d5f6910ba5397fe0a5c6a99)
+
+惯例先来看`todo.md` : 
+
+> - sd-width
+> - sd-visible
+> - sd-style
+
+弄了一个最简的`hello world example`
+
+加了一个`sd-data`进来，有什么用？只能后面再看了
+```js
+dataSlt = '[' + config.prefix + '-data]'
+```
+
+---
+
+#### auto parse dependency for computed properties!!!!! [7a0172d](https://github.com/vuejs/vue/commit/7a0172d60b636c83a9559b6163d3b2d9058759ab)
+
+作者用了这么多感叹号，想必是很爽的。。实现了`依赖的自动计算`
+
+这个commit对`computed properties`做了较大的重构，需要梳理一下：
+
+以下面这个`total`属性为例：
+
+```js
+scope.total = {get: function () {
+    return scope.todos.length
+}}
+```
+
+- `total`依赖于`todos`。
+- 把依赖计算写到了`get`函数里。（这里规定了这样的格式）
+
+执行了上面的赋值后，必然触发`set`;
+
+```js
+ // add event listener to update corresponding binding
+// when a property is set
+this.on('set', this._updateBinding.bind(this))
+```
+
+由这句，去触发`_updateBinding`, 有以下逻辑：
+
+```js
+if (type === 'Object') {
+    if (value.get) { // computed property
+        this._computed.push(binding)
+        binding.isComputed = true
+        value = value.get
+    } else { // normal object
+        // TODO watchObject
+    }
+} 
+```
+
+可以看出：
+
+- 如果`value.get`有定义，那么它就是一个`computed property` （isComputed = true）
+- `push`到`Seed`的`_computed`属性中
+
+然后开始：
+
+```js
+    // update all instances
+    binding.instances.forEach(function (instance) {
+        instance.update(value)
+    })
+
+    // 接着执行
+    if (typeof value === 'function' && !this.fn) {
+        // 这里就是开始执行scope.todo.length 了
+        value = value()
+    }
+```
+
+那么在这里又会对`Scope.todo`做`get`操作......
+
+
+```js
+
+Seed.prototype._createBinding = function (key) {
+    ...
+    Object.defineProperty(this.scope, key, {
+        get: function () {
+            if (parsingDeps) {
+                // 每当get时，就会触发`get`事件
+                depsObserver.emit('get', binding)
+            }
+            seed.emit('get', key)
+            return binding.isComputed
+                ? binding.value()
+                : binding.value
+        },
+        ...
+    })
+
+    return binding
+}
+
+// 接着执行 
+
+    this._computed.forEach(this._parseDeps.bind(this))
+
+// 接着执行 
+
+Seed.prototype._parseDeps = function (binding) {
+    // 如上, 触发了`get`事件后，这里的dependents就会收集依赖。
+    depsObserver.on('get', function (dep) {
+        if (!dep.dependents) {
+            dep.dependents = []
+        }
+        dep.dependents.push.apply(dep.dependents, binding.instances)
+    })
+    binding.value()
+    // 收集完依赖，干掉 
+    depsObserver.off('get')
+}
+
+```
+
+这个流程就结束了
+
+
+
+
+
+如果设置了新值，流程如下：
+
+update --> refresh --> emitChange -->  所有依赖refresh 
+
+```js
+// called when a new value is set
+Directive.prototype.update = function (value) {
+    ...
+    if (this.binding.isComputed) {
+        this.refresh()
+    }
+}
+
+// called when a dependency has changed
+Directive.prototype.refresh = function () {
+    ...
+    this.binding.emitChange()
+}
+
+ Binding.prototype.emitChange = function () {
+     this.dependents.forEach(function (dept) {
+         dept.refresh()
+     })
+ }
+```
+---
 
 
 
