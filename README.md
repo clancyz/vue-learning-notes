@@ -1110,15 +1110,15 @@ Seed.prototype._parseDeps = function (binding) {
 
 ```
 
-这个流程就结束了
+**这个流程就结束了**
 
 
 
 
 
-如果设置了新值，流程如下：
+> 如果设置了新值，流程如下：
 
-update --> refresh --> emitChange -->  所有依赖refresh 
+> update --> refresh --> emitChange -->  所有依赖refresh 
 
 ```js
 // called when a new value is set
