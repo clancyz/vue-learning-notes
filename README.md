@@ -1143,8 +1143,156 @@ Directive.prototype.refresh = function () {
 ```
 ---
 
+#### fix _dump() [dada181](https://github.com/vuejs/vue/commit/dada181c8581e4af4e1bf16b86744ebdc8d8d35e)
 
+#### no longer need $refresh [faf0557](https://github.com/vuejs/vue/commit/faf055791e8a0f1b36cdeafb41b13f22eb8b9b8b)
 
+#### clean up, trying to fix delegation after array reset [c0a65dd](https://github.com/vuejs/vue/commit/c0a65ddda5f0e6a332b8dbb2bb2552fdef6f5f89)
+
+结合前面的`get`做的改动。
+还在和`delegation`做斗争, 使用`each`指令时, 来操作`parentNode` :
+
+> 那么前面一直存在的各种matchSelector就木用了
+
+```js
+bind: function () {
+    ...
+    this.delegator = this.el.parentNode;
+}
+
+ unbind: function (rm) {
+     ...
+        var delegator = this.delegator
+        if (!delegator) return
+        var handlers = delegator.sdDelegationHandlers
+        for (var key in handlers) {
+            console.log('remove: ' + key)
+            delegator.removeEventListener(handlers[key].event, handlers[key])
+        }
+        delete delegator.sdDelegationHandlers
+    }
+```
+
+---
+
+#### separate binding into its own file [832e975](https://github.com/vuejs/vue/commit/832e97588d0a600d2a29ff406ebf1648341e9043)
+
+clean up binding [60e246e](https://github.com/vuejs/vue/commit/60e246eedbd8d0a2be44a5ef2274f506d322b931)
+
+把负责绑定和数组监听的部分拆分到 `binding.js`，部分变量重命名
+
+---
+
+#### sd-if [60a3e46](https://github.com/vuejs/vue/commit/60a3e46fbb8b1f86f29c080f50ef3329e6be40c7)
+
+加入`sd-if`指令。
+
+```js
+'if': {
+    bind: function () {
+        this.parent = this.el.parentNode
+        this.ref = this.el.nextSibling
+    },
+    update: function (value) {
+        if (!value) {
+            if (this.el.parentNode) {
+                this.parent.removeChild(this.el)
+            }
+        } else {
+            if (!this.el.parentNode) {
+                // insertBefore时需要考虑原始位置。
+                this.parent.insertBefore(this.el, this.ref)
+            }
+        }
+    }
+}
+```
+这里`insertBefore`是需要维护**原来的位置**的，所以要维护一个`参考节点`即`nextSibling`
+
+---
+
+#### sd-style [646b790](https://github.com/vuejs/vue/commit/646b790863110508ec0f074d75d262b4159384fb)
+
+`style`指令。
+
+现在的写法，以`borderColor`为例：
+
+> dom :  sd-style="borderColor"
+> scope: borderColor = '#000'
+
+是以`-`做分隔符，比如`borderColor`这个style，写成`border-color`
+
+额，一个初级版本吧。
+
+---
+
+#### remove unused [62a7ebe](https://github.com/vuejs/vue/commit/62a7ebe7db8306f9041880ff52508b23ae0c1d28)
+
+嗯，把各种`matchSelector`干掉了 
+
+---
+
+#### remove redundant dependencies for computed properties [76ee306](https://github.com/vuejs/vue/commit/76ee306bdfa60e19cc3d3981547b64a68af4d2f4)
+
+原先的依赖解析提取出来, 单独作为流程的一步，这样清晰多了。
+
+```js
+this._computed.forEach(parseDeps)
+this._computed.forEach(injectDeps)
+```
+
+同时，原来的依赖解析有`重复依赖`的问题，每次`get`都会去push，要修一下
+
+```js
+function parseDeps (binding) {
+    depsObserver.on('get', function (dep) {
+         if (!dep.dependents) {
+             dep.dependents = []
+             }
+        dep.dependents.push.apply(dep.dependents, binding.instances)
+    })
+```
+
+放在了binding.dependencies里面：
+
+```js
+
+/*
+ *  Auto-extract the dependencies of a computed property
+ *  by recording the getters triggered when evaluating it.
+ *
+ *  However, the first pass will contain duplicate dependencies
+ *  for computed properties. It is therefore necessary to do a
+ *  second pass in injectDeps()
+ */
+function parseDeps (binding) {
+    binding.dependencies = []
+    depsObserver.on('get', function (dep) {
+        binding.dependencies.push(dep)
+    })
+    binding.value.get()
+    depsObserver.off('get')
+}
+```
+
+修掉，原因作者说得很清楚了：
+
+```js
+
+/*
+ *  The second pass of dependency extraction.
+ *  Only include dependencies that don't have dependencies themselves.
+ */
+function injectDeps (binding) {
+    binding.dependencies.forEach(function (dep) {
+        if (!dep.dependencies || !dep.dependencies.length) {
+            dep.dependents.push.apply(dep.dependents, binding.instances)
+        }
+    })
+}
+```
+
+---
 
 
 
