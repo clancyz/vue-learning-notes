@@ -1251,6 +1251,7 @@ function parseDeps (binding) {
              }
         dep.dependents.push.apply(dep.dependents, binding.instances)
     })
+}
 ```
 
 放在了binding.dependencies里面：
@@ -1290,9 +1291,151 @@ function injectDeps (binding) {
         }
     })
 }
+
+
 ```
 
 ---
+
+#### html and attr directives [f9077cf](https://github.com/vuejs/vue/commit/f9077cfa6afe39bfc6a7ffc0f81074ac95221b4b)
+
+加了`attr`和`html`的指令
+
+---
+
+#### text parser started, features, optional oneway binding for input [7fd557c](https://github.com/vuejs/vue/commit/7fd557ccc8d8636c207229d289a8c45d2445a176)
+
+`todo.md` 中可以看到在思考`组件化`的问题 
+
+开始搞`text-parser`, 原来是`sd-text`
+
+现在使用`{{}}`语法 
+
+单次绑定需要加一个`-oneway`标记，如`sd-checked-oneway`
+
+内置指令对这个`oneway`会做处理。
+
+#### text parser [5541b97](https://github.com/vuejs/vue/commit/5541b971ed4e0ce793a034057025bb7be117a12b)
+
+在完善`text-parser`, parse完成后返回一个`token`数组 
+
+还未到可用状态 
+
+#### finish text parser [b5f0227](https://github.com/vuejs/vue/commit/b5f0227186c3d73b9eca26b05ccec93263a57d09)
+
+OK, 是时候梳理一下`text-parser`
+
+`api.bootstrap` --> `buildRegex`，即创建一个`{{(.+?)}}`的`Regexp`
+
+初始化创建`Seed`实例 --> `_compileNode` --> 如果是`textNode`, 进入`_compileTextNode`
+
+`textNode` 两种内置指令： `{{}}` 和 `sd-text`
+
+如果match了`{{}}`的方式，就按`sd-text`的方式去`parse`再绑定:
+
+```js
+tokens.forEach(function (token) {
+    // 这里是bug. createTextNode() 方法要求有1个参数
+    var el = document.createTextNode()
+    // token.key，如{{label}} --> label 
+    if (token.key) {
+        var directive = Directive.parse(config.prefix + '-text', token.key)
+        if (directive) {
+            directive.el = el
+            seed._bind(directive)
+        }
+    } else {
+        el.nodeValue = token
+    }
+    node.parentNode.insertBefore(el, node)
+})
+```
+---
+
+#### jshint pass, readme & todo [3d99d8f](https://github.com/vuejs/vue/commit/3d99d8fc9a7635bfdaee521e173b55a0000b6120)
+
+略
+
+---
+
+#### chinese readme [8c8a07d](https://github.com/vuejs/vue/commit/8c8a07dd7f808a19e3e06d3d707054ca911ddec5)
+
+`directive.js`可以自定义directive的相关函数 
+
+```js
+var prop,
+        definition = directives[directiveName]
+    // mix in properties from the directive definition
+    if (typeof definition === 'function') {
+        this._update = definition
+    } else {
+        // 这里就是自定义的
+        this._update = definition.update
+        for (prop in definition) {
+            if (prop !== 'update') {
+                this[prop] = definition[prop]
+            }
+        }
+    }
+
+```
+
+如实现`delegation`的`on.js`, 结构如下, 已经有现在的`custom directive`的味道了：
+
+```js
+
+module.exports = {
+    expectFunction : true,
+    bind: function () {
+        ...
+    },
+    update: function (handler) {
+        ...
+    },
+    unbind: function () {
+        ...
+    }
+}
+```
+
+
+#### minor updates [0e91e50](https://github.com/vuejs/vue/commit/0e91e50df32fc86a9538265ad54c8b697e3f7313)
+
+> 卖点：
+> - gzip后5kb大小
+> - 基于DOM的动态模版，精确到TextNode的DOM操作
+> - 管道过滤函数 (filter piping)
+> - 自定义绑定函数 (directive) 和过滤函数 (filter)
+> - Model就是原生JS对象，不需要繁琐的get()或set()。操作对象自动更新DOM
+> - 自动抓取需要计算的属性 (computed properties) 的依赖
+> - 在数组重复的元素上添加listener的时候自动代理事件 (event delegation)
+> - 基于Component，遵循CommonJS模块标准，也可独立使用
+> - 移除时自动解绑所有listener
+
+另外做了一些cleanup.
+
+---
+
+#### remove explorations [8e028ab](https://github.com/vuejs/vue/commit/8e028ab63474b16cfce1f87656970f604c12e041)
+
+#### update examples [3709862](https://github.com/vuejs/vue/commit/3709862ec1100a966faf98aefdcb3b0b16655f77)
+
+
+#### update todo [9602102](https://github.com/vuejs/vue/commit/960210253e02f0da649a0e4e086e97da486427c3)
+
+#### readme [4dad89d](https://github.com/vuejs/vue/commit/4dad89d3a19cd3cbb659b75a218f582148546ce3)
+
+
+#### fix array augmentation methods [953fd1a](https://github.com/vuejs/vue/commit/953fd1adb4650c80462b1a11aac48f131a4c06ed)
+
+#### license [75fc96a](https://github.com/vuejs/vue/commit/75fc96a35733fdd651028f9ec4126c660bf63fdf)
+
+文字工作，略 
+
+---
+
+
+
 
 
 
