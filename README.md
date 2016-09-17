@@ -1344,7 +1344,7 @@ tokens.forEach(function (token) {
             directive.el = el
             seed._bind(directive)
         }
-    } else {
+    } else { // else的情况，那就是纯文本，如 <i>text:{{label}}</i> 中的"text:"部分
         el.nodeValue = token
     }
     node.parentNode.insertBefore(el, node)
@@ -1379,13 +1379,13 @@ var prop,
     }
 
 ```
-
-如实现`delegation`的`on.js`, 结构如下, 已经有现在的`custom directive`的味道了：
+在`directive`目录下的内置指令，均有`bind`, `update`, `unbind`的钩子，
+已经有现在的`custom directive`的味道了：
 
 ```js
 
 module.exports = {
-    expectFunction : true,
+    ...
     bind: function () {
         ...
     },
@@ -1434,7 +1434,325 @@ module.exports = {
 
 ---
 
+#### move defineProperty() into Binding, add setter for computed property [52645e3](https://github.com/vuejs/vue/commit/52645e33bfc1d44ff93a8bace64f1ec74629deba)
 
+对于`computed property` 加入了`setter`
+
+```js
+scope.allDone = {
+    get: function () {
+        return scope.remaining === 0
+    },
+    set: function (value) {
+        scope.todos.forEach(function (todo) {
+            todo.done = value
+        })
+        scope.remaining = value ? 0 : scope.total
+    }
+}
+```
+对于这个`allDone`, 加入了`set`; 有`set`属性的也说明是一个`computed property`
+
+```js
+/*
+ *  Define getter/setter for this binding on scope
+ */
+Binding.prototype.defineAccessors = function (seed, key) {
+    var self = this
+    Object.defineProperty(seed.scope, key, {
+        get: function () {
+            ...
+        },
+        set: function (value) {
+            // 这里不再使用emit('set')
+            if (self.isComputed && self.value.set) {
+                self.value.set(value)
+            } else if (value !== self.value) {
+                self.value = value
+                self.update(value)
+            }
+        }
+    })
+}
+```
+---
+
+#### separate deps-parser [e762cc7](https://github.com/vuejs/vue/commit/e762cc7ed56840cadcf0aa4d55a9da2bdf2272c3)
+
+把`deps-parser`抽离，职责更清晰
+
+---
+
+#### clean up, add comments [7ad304e](https://github.com/vuejs/vue/commit/7ad304eb9de9546acc42775d25de4bd87fe070ce)
+
+只在`sd-each`指令`update`时来定义`delegator`
+
+不再单独定义`delegator`, 放在了`this.container.sd_dHandlers` (parentNode)中
+
+---
+
+#### parse key path in directive parser [c2faf1c](https://github.com/vuejs/vue/commit/c2faf1c1431c76055918dc92f1eb2d4835a2350d)
+
+`key path`的作用显然就是用来做`nested property`的。。
+
+```js
+if (key.indexOf('.') > 0) {
+    var path = key.split('.')
+    key = path[path.length - 1]
+    this.path = path.slice(0, -1)
+}
+```
+
+举例：如`sd-text="a.b.c"`
+
+```js
+this.path = ['a', 'b']
+```
+。。。
+
+---
+
+#### bower [d26ec01](https://github.com/vuejs/vue/commit/d26ec01f15f216be660588e86c4cecc115dab0b9) 
+
+略
+
+---
+
+#### nested properties [4126f41](https://github.com/vuejs/vue/commit/4126f41b08fe335224e0c197b0cb170fc5e3145d)
+
+
+#### update nested props example [bf71151](https://github.com/vuejs/vue/commit/bf71151a1a78344c8ee43867320a3f0596b3011c)
+
+`todo.md`: 已经在思考插件（或生态）的问题。。
+
+> - sd-with
+> - standarized way to reuse components (sd-component?)
+> - plugins: seed-touch, seed-storage, seed-router
+
+这两个commit一起看，搞定了`nested properties`
+
+结合`examples/nested_props.html`做为示例测试：
+
+```html
+<h1>a.b.c : {{a.b.c}}</h1>
+<h2>a.c : {{a.c}}</h2>
+<h3>Computed property that concats the two: {{d}}</h3>
+<button sd-on="click:one">one</button>
+<script>
+    var Seed = require('seed')
+    Seed.controller('test', function (scope) {
+        scope.one = function () {
+            scope.a = {
+                c: 1,
+                b: {
+                    c: 'one'
+                }
+            }
+        }
+
+        // computed properties also works!!!!
+        scope.d = {get: function () {
+            return (scope.a.b.c + scope.a.c) || ''
+        }}
+    })
+    var app = Seed.bootstrap()
+</script>
+
+```
+
+当key为`a.b.c`时，显然, 是需要对`c`做`getter`和`setter`，
+原先的`defineAccessors`已经不适用， 
+所以对于这个绑定表达式，需要判定当前的`path`有多长
+递归地去做`defineAccessors`, 直到对`c`建立`getter`和`setter`
+
+```js
+Binding.prototype.defineAccessors = function (scope, path) {
+    ...
+    if (path.length === 1) {
+        // 像就是a这样的expression,直接defineProperty
+    } else {
+        // 创建一个过渡的（中间的) subscope
+        // 递归地defineAccessor, 直到path.length === 1
+
+         // we are not there yet!!!
+        // create an intermediate subscope
+        // which also has its own getter/setters
+        var subScope = scope[key]
+        if (!subScope) {
+            subScope = {}
+            Object.defineProperty(scope, key, {
+                get: function () {
+                    return subScope
+                },
+                set: function (value) {
+                    // when the subScope is given a new value,
+                    // copy everything over to trigger the setters
+                    for (var prop in value) {
+                        subScope[prop] = value[prop]
+                    }
+                }
+            })
+        }
+        this.defineAccessors(subScope, path.slice(1))
+    }
+
+}
+```
+
+增加了一个`getValue`函数, 也有这样的递归思想：
+
+```js
+function getValue (scope, path) {
+    if (path.length === 1) return scope[path[0]]
+    var i = 0
+    /* jshint boss: true */
+    while (scope[path[i]]) {
+        scope = scope[path[i]]
+        i++
+    }
+    return i === path.length ? scope : undefined
+}
+```
+
+
+---
+
+#### add browser support list [dd6b5ae](https://github.com/vuejs/vue/commit/dd6b5aecf77ed8aeb9c6a0a3584937b00dbd7e9c)
+
+#### fix [0e84526](https://github.com/vuejs/vue/commit/0e845263df2ebbdfc37feec7b0e6768891beb8dd)
+
+#### todo [495e62f](https://github.com/vuejs/vue/commit/495e62f39a1fd0ab8561fd76088dc39653f308c8)
+
+文字工作，略
+
+---
+
+#### shorten some function names since they cant be mangled [fa45383](https://github.com/vuejs/vue/commit/fa453830ded8964013f3e3ed038fb208acfbbcdb)
+
+重命名，压缩用
+
+- defineAccessors --> def
+- dependents --> subs
+- denpendencies --> deps
+- emitChange --> pub
+- getScopeOwner --> trace
+
+---
+
+
+#### bootstrap returns single seep if that's the only one [f5995a5](https://github.com/vuejs/vue/commit/f5995a56416ab13d3336815104341a400280eb7b)
+
+`sd-controller="a"` 出现多个时返回数组，仅出现一个返回`Seed`实例 
+
+---
+
+#### debug option [ad1cc3b](https://github.com/vuejs/vue/commit/ad1cc3be98d417b9a4b54951d86cd12e57c84a44)
+
+增加`debug`模式，将一些常见报错`console.warn()`打印
+
+---
+
+#### jshint pass [a17c53e](https://github.com/vuejs/vue/commit/a17c53e45322ac6320492135767b65a5a3a70093)
+
+略
+
+#### formatting, done for the day [7ba0c80](https://github.com/vuejs/vue/commit/7ba0c8096db7ecec50d83d79f3c756b37cf80309)
+
+文字工作，略
+
+---
+
+#### restructure todomvc, add $watch/$unwatch [5200951](https://github.com/vuejs/vue/commit/5200951b0a3cd7e32f8b700762b653c89481c472)
+
+增加一个`scope.js`  加入`$watch`和`unwatch`
+
+`new Seed()`时会创建`Scope`实例：
+
+```js
+var scope = this.scope = new Scope(this, options)
+```
+`Scope`包含的内容：
+
+```js
+function Scope (seed, options) {
+    this.$seed     = seed
+    this.$el       = seed.el
+    this.$index    = options.index
+    this.$parent   = options.parentSeed && options.parentSeed.scope
+    this.$watchers = {}
+}
+```
+
+常用的一些自定义函数抛到了`utils.js`
+
+---
+
+#### grunt release task [8411724](https://github.com/vuejs/vue/commit/8411724a551dcef945ffd2097aba574add301080)
+
+打包工作
+
+---
+#### 0.1.0 [5f5aa8f](https://github.com/vuejs/vue/commit/5f5aa8fb404ece37416abf405dd1a207e8997862)
+
+打包完成， 0.1.0 done
+
+梳理一下：
+
+```js
+├── binding.js // 绑定逻辑
+├── config.js // 设置
+├── deps-parser.js // computed property依赖解析
+├── directive-parser.js // Expression解析器，同时负责创建Directive实例作为dom属性
+├── directives // 内部指令
+│   ├── each.js // sd-each数组指令，包括一系列mutationHandlers
+│   ├── index.js // 内部指令入口点及一系列常用的directive
+│   └── on.js // 事件监听
+├── filters.js // filter处理
+├── main.js  // 入口点
+├── scope.js // Scope class,包含了seed实例，dom,$watchers,$parent等信息
+├── seed.js // main ViewModel 
+├── text-parser.js // textNode parser
+└── utils.js // utols, 一些公用函数
+```
+
+里面最复杂的部分应该是：
+
+> `_compileNode` 节点解析
+> `computed properties`自动计算 
+
+过一下`_compileNode`:
+
+根据节点类型做不同处理:
+
+- `textNode` --> 解析纯文本节点`_compileTextNode(node)`
+- `nested controllers` --> 直接创建新实例`new Seed()`, parent是当前Seed
+- `normal node` --> 
+    - 【 遍历`attributes` --> `DirectiveParser.parse(attr.name, exp)`得到一个`Directive`新实例(d) --> 创建或使用现有`binding`， 把d添加到正确的`binding.instances`上 `SeedProto._bind(d)` 】
+    -  --> 如果有`childNode`则递归
+
+
+过一下`computed properties`的实现：
+
+- 核心是利用`Emiiter`的观察者模式，在`scope`上定义的属性，当其存在`getter`时, 收集依赖
+- 依赖只能依赖没有依赖的依赖, 举例：
+    
+```js
+// 说明remaining依赖于total和completed
+scope.remaining = {
+    get: function () {return scope.total - scope.completed}
+}
+
+// 说明total依赖于todos
+scope.total = {
+    get: function () {return scope.todos.length}
+}
+
+```
+这样，`remaining` 经过`deps-parser`后，实际依赖是 `todos` 和 `remaining`, `total`由于有其他依赖，被干掉 
+
+依赖改变时，通过接收到`get`事件，调用自己的`get`来更新。
+
+---
 
 
 
