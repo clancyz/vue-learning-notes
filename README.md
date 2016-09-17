@@ -1717,10 +1717,10 @@ function Scope (seed, options) {
 
 里面最复杂的部分应该是：
 
-> `_compileNode` 节点解析
-> `computed properties`自动计算 
+> - `_compileNode` 节点解析
+> - `computed properties`自动计算 
 
-过一下`_compileNode`:
+**过一下`_compileNode`:**
 
 根据节点类型做不同处理:
 
@@ -1731,7 +1731,7 @@ function Scope (seed, options) {
     -  --> 如果有`childNode`则递归
 
 
-过一下`computed properties`的实现：
+**过一下`computed properties`的实现：**
 
 - 核心是利用`Emiiter`的观察者模式，在`scope`上定义的属性，当其存在`getter`时, 收集依赖
 - 依赖只能依赖没有依赖的依赖, 举例：
