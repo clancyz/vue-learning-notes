@@ -1691,10 +1691,86 @@ scope.total = {
 
 ---
 
-#### ignore [0b77a96](https://github.com/vuejs/vue/commit/0b77a9665f4a04a8c716ed41826ebf3fdbd32e54)
-略
+PS：改了`grunt`打包之后，整个`seed`在一个立即执行function里面，原来的Demo应该都不能用了。。。
 
-#### fix sd-focus, comply with todomvc spec [58363eb](https://github.com/vuejs/vue/commit/58363ebea8cb7849392f29a5c1a684072eeb763d)
+```bash
+Uncaught ReferenceError: require is not defined
+```
+这当然了，因为都没有暴露到`window`里面去嘛......
+
+把第一行和最后一行注掉即可
+
+#### computed properties now have access to context scope and element [8eedfea](https://github.com/vuejs/vue/commit/8eedfeacf9f44d0ae33118816c2b352a2d1b420f)
+
+让`computed properties` 有访问`dom`和`scope`的能力
+
+值得关注的改动点是`src/deps-parser.js`
+
+```js
+function catchDeps (binding) {
+    ...
+    binding.value.get({
+        scope: createDummyScope(binding.value.get),
+        el: dummyEl
+    })
+    ...
+}
+```
+
+这个`createDummyScope` 是在搞啥呢？
+
+看这段注释：
+
+```
+/*
+ *  We need to invoke each binding's getter for dependency parsing,
+ *  but we don't know what sub-scope properties the user might try
+ *  to access in that getter. To avoid thowing an error or forcing
+ *  the user to guard against an undefined argument, we staticly
+ *  analyze the function to extract any possible nested properties
+ *  the user expects the target scope to possess. They are all assigned
+ *  a noop function so they can be invoked with no real harm.
+ */
+```
+首先，如果要让`computed property`访问`scope`和`dom`，就得在`get`时传入参数。：
+举例，这个参数是`e`
+
+```
+e = {$el: xxx, $scope:xxx}
+```
+
+假设用户这么去写
+
+```js
+scope.a = {}
+scope.compute_a = {
+    get: function (e) {
+      return  e.scope.a.b.c + 1
+    }
+}
+
+```
+那这样肯定是会报错的。
+
+> 但是却不能约束用户不去这么写。比如我是用户，我需要一个`promise`回来后，再赋值`scope.a = {b:{c:'hello'}}`，这时我也要求这个`compute_a` 能计算啊。这个要求合情理。
+
+作者的实现是：（这里的e也可以是其他啦，一样的）
+
+- 把`get`函数转成字符串，匹配`function (e) {xxx}`部分
+- 取出`xxx`部分，找匹配`e.scope.a.b.c`
+- 解析成path, ['a', 'b', 'c']
+- 看看a,b,c都有没有值咯，有值传值，没值将值赋成空函数`noop`(`function(){}`)
+
+如果a,b,c都没值的话，最后解析的结果：
+
+e.scope.a = function(){}
+e.scope.a.b = function(){}
+e.scope.a.b.c = function(){}
+
+---
+
+
+
 
 
 
