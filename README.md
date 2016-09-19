@@ -476,13 +476,6 @@ mutate: function (mutation) {
 
 加入了内置指令 `sd-class`
 
----
-
-#### 123 [16a4e05](https://github.com/vuejs/vue/commit/16a4e05a346960bef4b6bc9f5d875c3d4bef2cb5)
-
-#### stop jshint complaining [39760f4](https://github.com/vuejs/vue/commit/39760f49b7ac4a54be17c8f1c1803f581e7eba31) 
-
-没有实质内容
 
 ---
 
@@ -923,10 +916,6 @@ if (directive.deps) {
 
 ---
 
-#### jshint; [19b3926](https://github.com/vuejs/vue/commit/19b39263fce631df030a6259282eb3bafb053ff6)
-
-格式问题
-
 #### todo [f19e6c3](https://github.com/vuejs/vue/commit/f19e6c36f61ab92e62ded53954ecd93436784b98)
 
 - limited set of expressions (e.g. ternary operator)
@@ -1350,11 +1339,6 @@ tokens.forEach(function (token) {
     node.parentNode.insertBefore(el, node)
 })
 ```
----
-
-#### jshint pass, readme & todo [3d99d8f](https://github.com/vuejs/vue/commit/3d99d8fc9a7635bfdaee521e173b55a0000b6120)
-
-略
 
 ---
 
@@ -1414,23 +1398,6 @@ module.exports = {
 
 另外做了一些cleanup.
 
----
-
-#### remove explorations [8e028ab](https://github.com/vuejs/vue/commit/8e028ab63474b16cfce1f87656970f604c12e041)
-
-#### update examples [3709862](https://github.com/vuejs/vue/commit/3709862ec1100a966faf98aefdcb3b0b16655f77)
-
-
-#### update todo [9602102](https://github.com/vuejs/vue/commit/960210253e02f0da649a0e4e086e97da486427c3)
-
-#### readme [4dad89d](https://github.com/vuejs/vue/commit/4dad89d3a19cd3cbb659b75a218f582148546ce3)
-
-
-#### fix array augmentation methods [953fd1a](https://github.com/vuejs/vue/commit/953fd1adb4650c80462b1a11aac48f131a4c06ed)
-
-#### license [75fc96a](https://github.com/vuejs/vue/commit/75fc96a35733fdd651028f9ec4126c660bf63fdf)
-
-文字工作，略 
 
 ---
 
@@ -1510,11 +1477,6 @@ this.path = ['a', 'b']
 ```
 。。。
 
----
-
-#### bower [d26ec01](https://github.com/vuejs/vue/commit/d26ec01f15f216be660588e86c4cecc115dab0b9) 
-
-略
 
 ---
 
@@ -1614,17 +1576,6 @@ function getValue (scope, path) {
 }
 ```
 
-
----
-
-#### add browser support list [dd6b5ae](https://github.com/vuejs/vue/commit/dd6b5aecf77ed8aeb9c6a0a3584937b00dbd7e9c)
-
-#### fix [0e84526](https://github.com/vuejs/vue/commit/0e845263df2ebbdfc37feec7b0e6768891beb8dd)
-
-#### todo [495e62f](https://github.com/vuejs/vue/commit/495e62f39a1fd0ab8561fd76088dc39653f308c8)
-
-文字工作，略
-
 ---
 
 #### shorten some function names since they cant be mangled [fa45383](https://github.com/vuejs/vue/commit/fa453830ded8964013f3e3ed038fb208acfbbcdb)
@@ -1650,15 +1601,6 @@ function getValue (scope, path) {
 
 增加`debug`模式，将一些常见报错`console.warn()`打印
 
----
-
-#### jshint pass [a17c53e](https://github.com/vuejs/vue/commit/a17c53e45322ac6320492135767b65a5a3a70093)
-
-略
-
-#### formatting, done for the day [7ba0c80](https://github.com/vuejs/vue/commit/7ba0c8096db7ecec50d83d79f3c756b37cf80309)
-
-文字工作，略
 
 ---
 
@@ -1685,11 +1627,6 @@ function Scope (seed, options) {
 
 常用的一些自定义函数抛到了`utils.js`
 
----
-
-#### grunt release task [8411724](https://github.com/vuejs/vue/commit/8411724a551dcef945ffd2097aba574add301080)
-
-打包工作
 
 ---
 #### 0.1.0 [5f5aa8f](https://github.com/vuejs/vue/commit/5f5aa8fb404ece37416abf405dd1a207e8997862)
@@ -1754,6 +1691,10 @@ scope.total = {
 
 ---
 
+#### ignore [0b77a96](https://github.com/vuejs/vue/commit/0b77a9665f4a04a8c716ed41826ebf3fdbd32e54)
+略
+
+#### fix sd-focus, comply with todomvc spec [58363eb](https://github.com/vuejs/vue/commit/58363ebea8cb7849392f29a5c1a684072eeb763d)
 
 
 
