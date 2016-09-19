@@ -1763,10 +1763,11 @@ scope.compute_a = {
 
 如果a,b,c都没值的话，最后解析的结果：
 
+```
 e.scope.a = function(){}
 e.scope.a.b = function(){}
 e.scope.a.b.c = function(){}
-
+```
 ---
 
 
