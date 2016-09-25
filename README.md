@@ -1770,6 +1770,72 @@ e.scope.a.b.c = function(){}
 ```
 ---
 
+#### avoid duplicate context dependencies [a5727bd](https://github.com/vuejs/vue/commit/a5727bd4b37caffe1f8f0ae0fd615154c30e8e5d)
+
+`catchDeps` --> `parseContextDependency`
+
+避免`deps`重复的情况。
+
+---
+
+#### use for loops instead of forEach whenever possible [2d448ea](https://github.com/vuejs/vue/commit/2d448ea5e5d19b231aa8a525248aff11356c9936)
+
+`forEach` 都改写成普通的`for`和`while`循环，应该是性能方面的考虑。
+
+---
+
+#### add pluralize filter [9546965](https://github.com/vuejs/vue/commit/9546965ae0d0c578227394a2d5c64c6c44b461fd)
+
+【复数】形式的`filter`, 例如数量为1时显示`item`, 大于1时是`items` 
+ 这个好像必然是要干掉的 -- 复数后缀是`es`的咋办 = = 
+
+ --- 
+ #### separate storage in todos example, expose some utils methods [cfc27d8](https://github.com/vuejs/vue/commit/cfc27d89f1ff841ec9edd0c27d34b5111b098d4c)
+
+ 把`todos`里面的内容存在`localStorage`
+
+ 把下列函数放在了新建文件 `utils.js`
+
+ - typeOf
+ - dump
+ - serialize
+ - getNestedValue
+ - watchArray
+
+ ---
+
+ #### createTextNode in FF requires argument [8a004e7](https://github.com/vuejs/vue/commit/8a004e787598bc4a146e6045d97301dd4c2f5123)
+
+ `document.createTextNode()` ==> `document.createTextNode('')`
+ 作者终于把这个bug修掉了... 之前的commit都要手动去改这里。。
+
+ 奇怪的是，难道作者当时在用IE测试吗。。。
+ 
+ 查了一下[资料](https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-1975348127)，包括[Mozilla Developer](https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode)都似乎并没有说参数是必选的。
+
+ IE全系可以不带参数。`Chrome`和`FF`是必带的。各浏览器实现不同吧。。
+
+ ---
+
+ #### stricter check for computed properties [5bfb4b5](https://github.com/vuejs/vue/commit/5bfb4b5ef2919c23cb0f9208081980d70f7be15f)
+
+
+ ```js
+ if (type === 'Object') {
+     // 原来的判断 
+     // if (value.get || value.set) { self.isComputed = true}
+        if (value.get) {
+            var l = Object.keys(value).length
+            if (l === 1 || (l === 2 && value.set)) {
+                self.isComputed = true // computed property
+            }
+        }
+    }
+ ```
+
+ 规定了必须有`get` 才能是`computed property`
+
+ --- 
 
 
 
