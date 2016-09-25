@@ -1837,7 +1837,41 @@ e.scope.a.b.c = function(){}
 
  --- 
 
+#### add Seed.broadcast() and scope.$on() [2658486](https://github.com/vuejs/vue/commit/2658486bcc096ac8edfd46655115cb5373935f01)
 
+利用`Emitter` 实现事件系统, 绑定到`seed._listener`上 
+
+`on`和`off`来绑定和解绑
+
+---
+
+#### put properties on the scope prototype! [cc64365](https://github.com/vuejs/vue/commit/cc6436532376938c6a6be7a020ce2461dbb500e1)
+
+把`computed properties`的`get`和`set`搞到了`scope`的原型上 
+
+```js
+if (l === 1 || (l === 2 && value.set)) {
+    self.isComputed = true // computed property
+    value.get = value.get.bind(self.scope)
+    if (value.set) value.set = value.set.bind(self.scope)
+}
+```
+
+`api.controller`中引入了一个`ExtendedScope`, 注释如下
+
+> // create a subclass of Scope that has the extension methods mixed-in
+
+`seed.js`中；如果有`ExtendedScopeConstructor`则使用，否则用原生的
+
+>    // create the scope object
+>
+>    // if the controller has an extended scope contructor, use it;
+>
+>    // otherwise, use the original scope constructor.
+
+**为什么要引入这个东西，要思考下。。这里存疑**
+
+---
 
 
 
