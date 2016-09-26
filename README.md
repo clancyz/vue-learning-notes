@@ -1859,7 +1859,23 @@ if (l === 1 || (l === 2 && value.set)) {
 
 `api.controller`中引入了一个`ExtendedScope`, 注释如下
 
+
 > // create a subclass of Scope that has the extension methods mixed-in
+
+```js
+var ExtendedScope = function () {
+        Scope.apply(this, arguments)
+    }
+    var p = ExtendedScope.prototype = Object.create(Scope.prototype)
+    p.constructor = ExtendedScope
+    for (var prop in properties) {
+        if (prop !== 'init') {
+            p[prop] = properties[prop]
+        }
+    }
+```
+
+典型的`原型继承`， 这说明`controller`实际上就是`scope`的子类
 
 `seed.js`中；如果有`ExtendedScopeConstructor`则使用，否则用原生的
 
@@ -1870,6 +1886,90 @@ if (l === 1 || (l === 2 && value.set)) {
 >    // otherwise, use the original scope constructor.
 
 **为什么要引入这个东西，要思考下。。这里存疑**
+
+---
+
+#### rename internal, optimize memory usage for GC [d78df31](https://github.com/vuejs/vue/commit/d78df3101711ee85b4c3ebf5d488a0d4e9e89ad6)
+
+#### really fix GC [a85453c](https://github.com/vuejs/vue/commit/a85453cc89a13c239fccad1bb7b276c4fe473e0a)
+
+- `seed.js` 改名为 `complier.js`
+- `scope.js` 改名为 `viewmodel.js`
+
+这个命名比原来的赞多了...
+
+`scope -> vm` 容易让人想到`angular` 的 `controller as`...
+
+干掉了好多`self`换成了`this`感觉清爽许多，当然一些地方需要配合`Function.prototype.bind`
+
+加入了`BindingProto.unbind` 
+
+GC:
+
+```js
+this.vm = this.compiler = this.pubs = this.subs = this.instances = this.deps = null
+```
+
+---
+
+#### binding should only have access to compiler [f071f87](https://github.com/vuejs/vue/commit/f071f87bc7f0931e0f6382aefb98c4e01d81505a)
+
+`binding`直接使用`complier`中的`vm` 而不是自己定义一个；
+
+---
+
+#### new api WIP [761b643](https://github.com/vuejs/vue/commit/761b643baad247394f35877e7cc25624cd9e92e3)
+
+开发模式大改变，隐隐有现在的味道了：
+
+```js
+Seed.ViewModel.extend({
+    template: 'xxx', //optional
+    el: 'xxx', //optional
+    initialize: function () {...},
+    properties: {
+        // 属性
+        total: {get: function (){...}},
+        // 方法。
+        addTodo: function () {...}
+    },
+
+})
+```
+
+对比原来：
+
+```js
+Seed.controller('todos', {
+    // initializer, reserved
+    init: function () {
+       ...
+    },
+    // computed properties ----------------------------------------------------
+    total: {get: function () {
+        ...
+    }},
+    // event handlers ---------------------------------------------------------
+    addTodo: function () {
+        ...
+    },
+})
+
+Seed.bootstrap()
+
+```
+
+对比原来的好处：
+
+- 结构更清晰
+- 开发者理解更加简单：不用去写`sd-controller`, 不用去调用`Seed.bootstrap()`
+- 不用去理解`controller`和`scope`这些概念名词
+- 更易复用和组件化，整个`viewmodel`即是一个`object`
+
+`MVVM` 模式下：
+
+> 写html(绑定`properties`和`methods`) -> 写viewModel(定义`properties`和`methods`) 
+> `properties` 改变时通知html改变视图； html改变时触发`properties`改变或触发`method`
 
 ---
 
