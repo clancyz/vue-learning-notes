@@ -1789,53 +1789,55 @@ e.scope.a.b.c = function(){}
 【复数】形式的`filter`, 例如数量为1时显示`item`, 大于1时是`items` 
  这个好像必然是要干掉的 -- 复数后缀是`es`的咋办 = = 
 
- --- 
- #### separate storage in todos example, expose some utils methods [cfc27d8](https://github.com/vuejs/vue/commit/cfc27d89f1ff841ec9edd0c27d34b5111b098d4c)
+--- 
 
- 把`todos`里面的内容存在`localStorage`
+#### separate storage in todos example, expose some utils methods [cfc27d8](https://github.com/vuejs/vue/commit/cfc27d89f1ff841ec9edd0c27d34b5111b098d4c)
 
- 把下列函数放在了新建文件 `utils.js`
+把`todos`里面的内容存在`localStorage`
 
- - typeOf
- - dump
- - serialize
- - getNestedValue
- - watchArray
+把下列函数放在了新建文件 `utils.js`
 
- ---
+- typeOf
+- dump
+- serialize
+- getNestedValue
+- watchArray
 
- #### createTextNode in FF requires argument [8a004e7](https://github.com/vuejs/vue/commit/8a004e787598bc4a146e6045d97301dd4c2f5123)
+---
 
- `document.createTextNode()` ==> `document.createTextNode('')`
- 作者终于把这个bug修掉了... 之前的commit都要手动去改这里。。
+#### createTextNode in FF requires argument [8a004e7](https://github.com/vuejs/vue/commit/8a004e787598bc4a146e6045d97301dd4c2f5123)
 
- 奇怪的是，难道作者当时在用IE测试吗。。。
+`document.createTextNode()` ==> `document.createTextNode('')`
  
- 查了一下[资料](https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-1975348127)，包括[Mozilla Developer](https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode)都似乎并没有说参数是必选的。
+作者终于把这个bug修掉了... 之前的commit都要手动去改这里。。
 
- IE全系可以不带参数。`Chrome`和`FF`是必带的。各浏览器实现不同吧。。
+奇怪的是，难道作者当时在用IE测试吗。。。
+ 
+查了一下[资料](https://www.w3.org/TR/DOM-Level-3-Core/core.html#ID-1975348127)，包括[Mozilla Developer](https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode)都似乎并没有说参数是必选的。
 
- ---
+IE全系可以不带参数。`Chrome`和`FF`是必带的。各浏览器实现不同吧。。
 
- #### stricter check for computed properties [5bfb4b5](https://github.com/vuejs/vue/commit/5bfb4b5ef2919c23cb0f9208081980d70f7be15f)
+---
+
+#### stricter check for computed properties [5bfb4b5](https://github.com/vuejs/vue/commit/5bfb4b5ef2919c23cb0f9208081980d70f7be15f)
 
 
- ```js
- if (type === 'Object') {
-     // 原来的判断 
-     // if (value.get || value.set) { self.isComputed = true}
-        if (value.get) {
-            var l = Object.keys(value).length
-            if (l === 1 || (l === 2 && value.set)) {
-                self.isComputed = true // computed property
-            }
+```js
+if (type === 'Object') {
+    // 原来的判断 
+    // if (value.get || value.set) { self.isComputed = true}
+    if (value.get) {
+        var l = Object.keys(value).length
+        if (l === 1 || (l === 2 && value.set)) {
+            self.isComputed = true // computed property
         }
     }
- ```
+}
+```
 
- 规定了必须有`get` 才能是`computed property`
+规定了必须有`get` 才能是`computed property`
 
- --- 
+--- 
 
 #### add Seed.broadcast() and scope.$on() [2658486](https://github.com/vuejs/vue/commit/2658486bcc096ac8edfd46655115cb5373935f01)
 
@@ -1969,9 +1971,63 @@ Seed.bootstrap()
 `MVVM` 模式下：
 
 > 写html(绑定`properties`和`methods`) -> 写viewModel(定义`properties`和`methods`) 
+>
 > `properties` 改变时通知html改变视图； html改变时触发`properties`改变或触发`method`
 
+这么做的代价并不高，但是带来的开发体验感觉是颠覆式的~ 
+
+俺个人就很不喜欢`controller`和`scope`这两个词儿 = =
+
 ---
+
+
+#### working, but with memory issue; [c98c8a6](https://github.com/vuejs/vue/commit/c98c8a68cb2eee3acfc22e19b86ee9ba3f899a63)
+
+> each.js
+
+```js
+var config = require('../config'),
+    ViewModel // lazy def to avoid circular dependency
+
+buildItem: function (ref, data, index) {
+    ...
+    ViewModel = ViewModel || require('../viewmodel')
+    ...
+},
+
+```
+
+`ViewModel.js` 需要require  `compiler.js`
+
+`compiler.js` 需要 require `directive-parser`
+
+`directive-parser` 需要 require `directives/index.js`
+
+`directives/index.js` 需要 require `each.js`
+
+`each.js`又需要require`ViewModel.js`....
+
+绕了半天就形成了一个`circular dependency`
+
+--- 
+
+#### new api fixed [dddb255](https://github.com/vuejs/vue/commit/dddb2550740d1e991643a95628d34c8c38ae4f54)
+
+#### 0.2.0 [253c26d](https://github.com/vuejs/vue/commit/253c26db1a73cb5f635c4814b07e3fa7f20e64de)
+
+少量修正，编译0.2.0
+
+---
+
+### 总结一下0.1.0到0.2.0的升级改进：
+
+- computed properties 可以访问 `scope(viewmodel)` 和 `dom`
+- 基于`Emitter`引入了事件`pub/sub`系统 
+- 引入了`viewmodel`概念，开发范式接近现在的`Vue`
+- 性能优化类：循环优化，GC等
+
+---
+
 
 
 
