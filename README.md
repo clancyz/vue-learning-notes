@@ -2,7 +2,7 @@
 
 My note of learning Vue.js
 
-## 0.1.0
+## 0.1.0 （branch 0.10）
 
 #### 初始设置 
 
@@ -1700,6 +1700,9 @@ Uncaught ReferenceError: require is not defined
 
 把第一行和最后一行注掉即可
 
+
+## 0.2.0 （branch 0.10）
+
 #### computed properties now have access to context scope and element [8eedfea](https://github.com/vuejs/vue/commit/8eedfeacf9f44d0ae33118816c2b352a2d1b420f)
 
 让`computed properties` 有访问`dom`和`scope`的能力
@@ -1965,7 +1968,7 @@ Seed.bootstrap()
 
 - 结构更清晰
 - 开发者理解更加简单：不用去写`sd-controller`, 不用去调用`Seed.bootstrap()`
-- 不用去理解`controller`和`scope`这些概念名词
+- 不用去理解`controller`和`scope`这些概念名词，传`el`即可
 - 更易复用和组件化，整个`viewmodel`即是一个`object`
 
 `MVVM` 模式下：
@@ -2028,9 +2031,86 @@ buildItem: function (ref, data, index) {
 
 ---
 
+#### optimize array watch method hijacking [a104afb](https://github.com/vuejs/vue/commit/a104afb472e62a5b52e0a6f6d21aa2d920b1959c)
+
+把Array相关的Mutation方法提取出来了 
+
+---
+
+#### fix dump [174a19f](https://github.com/vuejs/vue/commit/174a19f5ec42130359a86e18194082d60121f887)
+
+照例看`todo.md`
+
+- ability to register a ViewModel so it can be auto-compiled as a nested vm
+- literals, function arguments, simple logic comparisons
+- let user specify which keys are data/state (i.e. available in $dump())
+
+- 声明一个 `viewmodel` 时自动编译啦 
+- 字面量，函数参数，简单的逻辑对比
+- 用户指定哪些是`data`哪些是`state` (这的`state`是类react的概念？)
+
+学英文:  `contextual binding` 结合上下文的
+
+```js
+
+var ARGS_RE = /^function\s*?\((.+?)[\),]/,
+
+args = str.match(ARGS_RE)
+if (!args) return null
+binding.isContextual = true
+```
 
 
+这里意味着：
 
+- 这个RegExp匹配的是形如 `function (abc) ` 这样 **带参数的**
+- 当`computed property` 需要用到当前上下文的时候， `isContextual = true `
+- 这种情况下，`dump()`时会跳过
+
+举例：
+```
+// dynamic context computed property using info from target viewmodel
+filterSelected: {get: function (ctx) {
+        return this.filter === ctx.el.textContent.toLowerCase()
+    }},
+```
+
+---
+
+#### support nested VMs and update examples to use new API [bf01a14](https://github.com/vuejs/vue/commit/bf01a14629e0b11ab33a5e20702eba94e281cbe8)
+
+`todo.md` 已经在考虑生态问题。。。
+
+- sd-with?
+- plugins
+    - seed-touch (e.g. sd-drag="onDrag" sd-swipe="onSwipe")
+    - seed-storage (RESTful sync)
+    - seed-router (express style)
+    - sd-validation (e.g. sd-validate="type:email, max:100, required:true")
+
+为当前的`viewmodel`模式支持了 `nested VMs` 如 `a.b.c`
+
+---
+
+#### simply api; [6f0eca4](https://github.com/vuejs/vue/commit/6f0eca4bf6447c5b2c570322e56135a011585429)
+
+**开发者体验至上的理念**，赞~ 
+
+
+--- 
+
+#### todos [0afd700](https://github.com/vuejs/vue/commit/0afd7005912a8abbb020496e5511d88c1c1c97e2)
+
+- add a few util methods, e.g. extend, inherits
+- fix architecture: objects as single source of truth...
+- prototypal scope/binding inheritance (Object.create)
+
+
+- 加些`util方法`
+- 改架构，对象作为单一数据源~~
+- 原型继承~
+
+--- 
 
 
 
