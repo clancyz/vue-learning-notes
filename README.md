@@ -2112,6 +2112,91 @@ filterSelected: {get: function (ctx) {
 
 --- 
 
+#### watcher [e028262](https://github.com/vuejs/vue/commit/e028262582e796d5d8bbc5c135e16a92279f7a10)
+
+#### external observe [b89092b](https://github.com/vuejs/vue/commit/b89092b31752c3a824f1e823603d65e2dd9612c6)
+
+
+`Array` => `arrayMutators` 
+
+`Object` => `Emitter`
+
+通过`Object.defineProperty`定义了几个`enumerable:false(不可枚举)` 、 `configurable:false(不可删改)` 的变量：
+
+- `__path__` 路径信息如`a.b.c` 
+- `__value__` 即值的副本
+- `__observer__` 用于事件emit
+
+最后，这个`watcher`的作用就是： 
+
+当变量`get|set|mutate`时，触发事件，结合现在的`watch`，很好理解 
+
+另外，`Array`在`push`进来一个新数据的时候要添加`watcher`，作者的思考是否是放在`each`里面搞，不单独放到`watcher.js`
+
+
+---
+
+#### wip [84538d6](https://github.com/vuejs/vue/commit/84538d6daefd0e1fdc6ec5efbeb377172adec556)
+
+小重构
+
+`Object.defineProperty` 相关被从`binding.js`移入`complier.js`
+
+`binding.js` 做的事情现在只有： 
+
+- update
+- refresh
+- unbind
+- pub 
+
+做的事情更纯粹，即在数据变化时做一个「执行者」角色
+
+`watchArray`相关被移出`util.js`做为`observer.js`的一部分，这样从概念上感觉更职责清晰
+
+arrayWatcher 只在observer时使用，并不是一个太公用的方法。
+
+---
+
+#### make dep parsing work [ea792ba](https://github.com/vuejs/vue/commit/ea792ba6bb8d43c79d47e1256e04dbf7af53ef91)
+
+`computed properties（依赖get function中的成员）`和已经有`__observer__（依赖下层级成员）`的属性们，你们已经不干净了！不纯洁了！
+
+所以不需要`emit`了。
+
+
+```js
+Object.defineProperty(this.vm, key, {
+    enumerable: true,
+    get: function () {
+        if (!binding.isComputed && !binding.value.__observer__) {
+            // only emit non-computed, non-observed values
+            // because these are the cleanest dependencies
+            compiler.observer.emit('get', key)
+        }
+        return binding.isComputed
+            ? binding.value.get({
+                el: compiler.el,
+                vm: compiler.vm
+            })
+            : binding.value
+    },
+    set: function (value) {
+        if (binding.isComputed) {
+            if (binding.value.set) {
+                binding.value.set(value)
+            }
+        } else if (value !== binding.value) {
+            compiler.observer.emit('set', key, value)
+            observe(value, key, compiler.observer)
+        }
+    }
+})
+})
+```
+
+---
+
+
 
 
 
