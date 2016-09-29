@@ -2196,11 +2196,200 @@ Object.defineProperty(this.vm, key, {
 
 ---
 
+#### add asyn compilation ($wait/$ready) [beded7d](https://github.com/vuejs/vue/commit/beded7d779a57ab6de42f89a69f4410ccdf64080)
+
+为异步加载的数据引入`$wait`和`$ready`
+
+如果调用了`vm.$wait()` 那么暂时不进行`compile`
+
+在用户执行`vm.$ready()` 的时候，使用`Emitter`派发事件，进行`compile`
+
+---
+
+#### todo [0f56b85](https://github.com/vuejs/vue/commit/0f56b858887bf79799cd1068f8b4907bb84356c8)
+
+- $watch / $unwatch & $destroy(now much easier)
+- add a few util methods, e.g. extend, inherits
+
+> 最后，这个`watcher`的作用就是： 
+>
+> 当变量`get|set|mutate`时，触发事件，结合现在的`watch`，很好理解 
 
 
+嗯，如前面的笔记，显然`watcher`是为 `$watch,$unwatch,$destroy` 服务的
+
+---
+
+#### unobserve when setting new values [caed31f](https://github.com/vuejs/vue/commit/caed31fd02ea9f9ab512bb1f2867ed1a52d01a84)
+
+作者在这个commit里面做了很多替换，多次访问属性的全搞出来，细微的性能优化也要优化~追求极致啊
+
+```js
+if (this.contextBindings.length) this.bindContexts(this.contextBindings)
+```
+
+to:
 
 
+```
+var contextBindings = this.contextBindings
+
+if (contextBindings.length) thisbindContexts(contextBindings)
+
+```
+
+当value改变时，这些old value已经不需要再watch了。emit get/set/mutate全置nullGC之~~
+
+```js
+set: function (value) {
+    ...
+    else if (value !== binding.value) {
+        // unwatch the old value!
+        Observer.unobserve(binding.value, key, compiler.observer)
+        // now watch the new one instead
+        Observer.observe(value, key, compiler.observer)
+        binding.value = value
+        compiler.observer.emit('set', key, value)
+    }
+}
+```
+
+---
+
+#### templates [d2779aa](https://github.com/vuejs/vue/commit/d2779aad828f94d636bdbef1579cba161bfdd082)
+
+额咋又把`api.bootstrap`搞回来了。。
+
+要支持`template`这玩意儿，作者当前想法是在`script`标签里面搞：
+
+```
+<script type="text/sd-template" sd-template-id="test">
+    <p>{{hi}}!</p>
+</script>
+```
+拿到`innerHTML`, 给它一个id: `test`, 存起来，取的时候用这个id取
+
+搞完之后把这个script干掉 
+
+---
+
+#### wip [bc84435](https://github.com/vuejs/vue/commit/bc84435133126e1f080571d624af11beb24171b5)
+
+`VMProto.$set` 用于处理在`value change`时类似`a.b.c`的赋值；
+
+如： `sd-checked = "a.b.c"`
+
+这里实现很优雅，学习一下
+
+如果没有"." 那么 `vm.a = value`;
+
+如果有那么一直往下搞。。 最后是 `vm.a.b.c.xxx = value`
+
+```js
+VMProto.$set = function (key, value) {
+    var path = key.split('.'),
+        level = 0,
+        target = this
+    while (level < path.length - 1) {
+        target = target[path[level]]
+        level++
+    }
+    target[path[level]] = value
+}
+```
+---
+
+#### trying to fix nested props [6ec70eb](https://github.com/vuejs/vue/commit/6ec70eb4a4811c6e13bda378a5938b0f7d307b0a)
+
+- auto add .length binding for Arrays
+
+嗯这个是必要的。
+
+src/deps-parser.js：
+
+`filterDeps` 完全干掉：由于emit的时候跳过computed property, 这玩意儿已经木有用了嘛。。
+
+src/compiler.js：
+
+`createBinding()`时维护了一个数组`observables`，用于收集**非computed**的vm属性
+
+遍历完vm后，observables也就收集完了，此时再进行`observe`
 
 
+```js
+for (key in vm) {
+    if (vm.hasOwnProperty(key) &&
+        key.charAt(0) !== '$' &&
+        !this.bindings[key])
+    {
+        this.createBinding(key)
+    }
+}
+
+...
+
+if (type === 'Object') {
+    if (value.get) {// computed property
+        ...
+    } else {
+        // observe objects later, becase there might be more keys
+        // to be added to it
+        this.observables.push(binding)
+    }
+} 
+
+...
+
+// define root keys
+var i = observables.length, binding
+while (i--) {
+    binding = observables[i]
+    Observer.observe(binding.value, binding.key, this.observer)
+}
+
+```
+---
+
+#### fix root key setter trigger order [1dd9c0e](https://github.com/vuejs/vue/commit/1dd9c0edcc8daf5f1d898f8d3bacb7b1ae9b602e)
+
+学英文。。忽略我俗俗的翻译水平
+
+/*
+ *  Sometimes when a binding is found in the template, the value might
+ *  have not been set on the VM yet. To ensure computed properties and
+ *  dependency extraction can work, we have to create a dummy value for
+ *  any given path.
+ */
+
+有时在模板中找到一个绑定变量时，值还没设哪（比如异步），那么为了让「计算属性」和「依赖提取」好使，需要为所有给定路径创建一个“虚拟变量”
+
+举个例子吧：比如定义一个`sd-checked`但又没有初始化`a.b`, 通过一个异步请求搞到并赋值
+
+```js
+<input type="checkbox" sd-checked="a.b">
+
+vm.checked = {get: function (){return !!a.b}}
+vm.a = {} 
+
+fetch(url).then(function(res) {
+  if (res.ok) {
+    res.json().then(function(data) {
+      vm.a.b = true
+    });
+  }
+});
+
+```
+那么在`CompilerProto.ensurePath`中会先给a.b搞成`undefined`
+
+---
+
+#### allow multiple VMs sharing one data object [75a4850](https://github.com/vuejs/vue/commit/75a4850afb4e5c598bbe14cbea6e594ac48da07d)
+
+新场景 ： 一份data被2个（或以上）vm使用 
+
+是判断有没有`__observer__` , 有的话再触发一次
+
+---
 
 
