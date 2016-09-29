@@ -2392,4 +2392,54 @@ fetch(url).then(function(res) {
 
 ---
 
+#### small cleanups [0a45bb8](https://github.com/vuejs/vue/commit/0a45bb813f9657c4409ee5a597a6125a09c65141)
+
+经常性地做一些cleanup，包括todo.md的编写对代码质量提升很有好处。
+向尤大学习科学的coding素养！
+
+---
+
+#### directly use array length [77ce1fc](https://github.com/vuejs/vue/commit/77ce1fc35552c2f85ab592b24773bf96e5a05bbd)
+
+这个实现有点暴力了 = =
+
+咋搞出个`this.array`专门做array length处理。。 画风突然变了的赶脚。。。。
+
+--- 
+
+#### fix each.js for new architecture [c6c5fdb](https://github.com/vuejs/vue/commit/c6c5fdb3d8ceadc4602b24dd9f22d88393b39cc5)
+
+果然果断把上面的实现干掉了。。
+
+Array就是observables, 直接emitSet即可 
+
+each.js里面按照vm的模式搞了一遍 
+
+---
+
+#### todo [1979aea](https://github.com/vuejs/vue/commit/1979aeab4a4aaf6bee2fa696145c99ab5ce115ed)
+
+- consult https://github.com/RubyLouvre/avalon/issues/11 to allow simple expressions in directives.
+
+尤大当时居然在看`avalon`..
+
+这里面的实现搞进去看到了[artTemplate](https://github.com/aui/artTemplate)
+
+模板引擎搞起来没个边啊（parser? 调试? 性能?。。。）
+
+对于MVVM框架这个的「边际」是一个很微妙的事情，做多了有些喧宾夺主，做少了也不行
+
+我理解支持常见运算符就能满足大部分需求了：
+
+- 比较运算符,如"> === <"
+- 算术运算符，如`%`
+- 逻辑运算符，如`&& ! ||`
+- 条件运算符(即三目)
+
+比如位运算符，一些关键字像delete, typeof, void，instanceof这些，感觉支持了也没有什么卵用...没啥使用率啊
+
+后面看作者是怎么思考这个边界的...
+
+---
+
 
