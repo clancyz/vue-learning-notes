@@ -2517,7 +2517,9 @@ args = ['two=this.$get('two')', 'one=this.$get('one')']
 
 args拼装 => `var two=this.$get('two'), one=this.$get('one');return one + ' ' + two + '!'`
 
-new Function(args), 得到Expresion的值
+new Function(args), 得到Expression的值
+
+这里最后把这个`Expression`当作一个`computed`成员来处理，思路很清楚
 
 ---
 
@@ -2529,4 +2531,77 @@ new Function(args), 得到Expresion的值
     
 ---
 
+#### make it cleaner [b379274](https://github.com/vuejs/vue/commit/b379274b31c8f94e45e5d407517745895fe1f998)
+
+果然大神都有的特点：强迫症，洁癖，完美主义 
+
+---
+
+#### $watch/$unwatch [874afe2](https://github.com/vuejs/vue/commit/874afe2389bbb4c4fbf9b55429c0935b0a9724d0)
+
+$watch和$unwatch直接代理到了observer上, 监听change事件~ 
+
+干净利落 
+
+---
+
+#### comments [d7f753e](https://github.com/vuejs/vue/commit/d7f753eff59a7fe1830e5b13bdcd44e45cc12209)
+
+各种没注释的都加了很清晰的注释...
+
+---
+
+#### get ready for tests [c6903e0](https://github.com/vuejs/vue/commit/c6903e0074c8a2b74ea2ba5f6037ea0ffdb1dda4)
+
+这个大阵仗，要开始写测试了。。。
+
+vue的测试覆盖率是恐怖的**100%**...
+
+---
+
+#### 0.3.2 - make it actually work for Browserify [498778e](https://github.com/vuejs/vue/commit/498778ec23e210be8affe331c9d86071ec79d461)
+
+赶时髦兼容`browserify`了... 对于13年来说，browserify的确是非常时髦的。。。
+
+---
+
+#### readme, todos [87f603f](https://github.com/vuejs/vue/commit/87f603f3723d386fefa9c2aac754370142835d4d)
+
+- ability to create custom tags
+
+组件化的第一步！
+
+---
+
+#### unit tests for binding.js [df21257](https://github.com/vuejs/vue/commit/df212574fd2cc5009769d3aed8c2e76acd7aeb0f)
+
+#### unit tests for directive.js [b23c790](https://github.com/vuejs/vue/commit/b23c790fbe22c8ccae98a7b7694fa0bb3d938838)
+
+#### fix directive test [5685f68](https://github.com/vuejs/vue/commit/5685f6853af70f4a221e041b8aff5751608a9037)
+
+#### use strictEqual [7fdb1b2](https://github.com/vuejs/vue/commit/7fdb1b25a7ea4c121f4c254fa593c6cb0c72301b)
+
+单元测试,撸码如有神
+
+---
+
+#### decouple compiler and exp-parser [1ef6571](https://github.com/vuejs/vue/commit/1ef6571c940f5f6e13f095b768d1550fb94746a4)
+
+需要从`exp-parser`中获得parse后的变量来创建binding
+
+---
+
+#### unit test for Expression Parser [d80b5ff](https://github.com/vuejs/vue/commit/d80b5ffef6a554fa79dcd6954e9125c43aa12255)
+
+#### unit test for Dependency Parser's internal methods [2433a3a](https://github.com/vuejs/vue/commit/2433a3a69c44edd60e286c805ca6a923c24cbaab)
+
+#### unit test for TextParser [1c85e86](https://github.com/vuejs/vue/commit/1c85e86297cbdecedf754444bd5a9bc41f88048c)
+
+...
+
+#### make all unit tests run in real browsers [6bc19e6](https://github.com/vuejs/vue/commit/6bc19e6e6674b3ecc5d3644e19ba45803ed34181)
+
+暂时先mark吧...这写测试的速度...已跪
+
+---
 
