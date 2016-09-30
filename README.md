@@ -2,7 +2,6 @@
 
 My note of learning Vue.js
 
-## 0.1.0 （branch 0.10）
 
 #### 初始设置 
 
@@ -1700,8 +1699,8 @@ Uncaught ReferenceError: require is not defined
 
 把第一行和最后一行注掉即可
 
+## 0.1.0 （branch 0.10）done
 
-## 0.2.0 （branch 0.10）
 
 #### computed properties now have access to context scope and element [8eedfea](https://github.com/vuejs/vue/commit/8eedfeacf9f44d0ae33118816c2b352a2d1b420f)
 
@@ -2022,6 +2021,8 @@ buildItem: function (ref, data, index) {
 
 ---
 
+## 0.2.0 （branch 0.10）done
+
 ### 总结一下0.1.0到0.2.0的升级改进：
 
 - computed properties 可以访问 `scope(viewmodel)` 和 `dom`
@@ -2030,6 +2031,8 @@ buildItem: function (ref, data, index) {
 - 性能优化类：循环优化，GC等
 
 ---
+
+
 
 #### optimize array watch method hijacking [a104afb](https://github.com/vuejs/vue/commit/a104afb472e62a5b52e0a6f6d21aa2d920b1959c)
 
@@ -2440,6 +2443,90 @@ each.js里面按照vm的模式搞了一遍
 
 后面看作者是怎么思考这个边界的...
 
+---
+
+#### fix init value for Directives [9c4b62f](https://github.com/vuejs/vue/commit/9c4b62fd508cb1d5152aa014054d54ad4a236ecc)
+
+```js
+/*
+ *  called when a new value is set 
+ *  for computed properties, this will only be called once
+ *  during initialization.
+ */
+DirProto.update = function (value, init) {
+    if (!init && value === this.value) return
+    this.value = value
+    this.apply(value)
+}
+```
+加了个参数`init`，但是好像没看到哪里有这么调的？这有啥用？
+
+**存疑**
+
+---
+#### add utils.extend [e1ce623](https://github.com/vuejs/vue/commit/e1ce623035957b4d11a80920d49249ff4f65013c)
+
+```js
+    extend: function (obj, ext) {
+         for (var key in ext) {
+             obj[key] = ext[key]
+         }
+     },
+```
+---
+
+#### expression parsing [9d0d211](https://github.com/vuejs/vue/commit/9d0d2114f8be447cd2aa0032d14b9b85278bc596)
+
+`src/exp-parser.js` 加入了expression parsing
+
+参考的`artTemplate` 实现 
+
+> 算法采用过滤的思路实现：
+>
+> 1. 删除注释、字符串、方法名，这一步是为了排除干扰
+> 2. 删除可组成变量的字符，只保留字母、数字、美元符号与下划线，并进行分组
+> 3. 删除分组中的 js 关键字与保留字成员
+> 4. 删除分组中的数字成员
+
+
+```js
+
+    REMOVE_RE   = /\/\*(?:.|\n)*?\*\/|\/\/[^\n]*\n|\/\/[^\n]*$|'[^']*'|"[^"]*"|[\s\t\n]*\.[\s\t\n]*[$\w\.]+/g,
+```
+
+最长的这个RE拆开就没啥啦
+
+\/\*(?:.|\n)*?\*\/|\/\/[^\n]*\n  -> 多行注释
+
+\/\/[^\n]*$ -> 单行注释
+
+'[^']*'|"[^"]*" -> 字符串
+
+[\s\t\n]*\.[\s\t\n]*[$\w\.]+  排除a.b.c干扰（.前面可能有\s\t\n）
+
+举例：
+
+```
+<p sd-text="one + ' ' + two + '!'"></p>
+```
+getVariables(expresion) => ['one', 'two']
+
+搞出函数表达式args => 
+
+args = ['two=this.$get('two')', 'one=this.$get('one')']
+
+args拼装 => `var two=this.$get('two'), one=this.$get('one');return one + ' ' + two + '!'`
+
+new Function(args), 得到Expresion的值
+
+---
+
+#### 0.3.0 [d4beb35](https://github.com/vuejs/vue/commit/d4beb35b68d3fe067cacb2627567703b0efe00bb)
+
+0.3.0版本
+
+## 0.3.0 （branch 0.10） done 
+    
 ---
 
 
