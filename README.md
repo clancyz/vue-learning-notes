@@ -2761,6 +2761,30 @@ function extend (options) {
 
 ---
 
+#### $index for each items [2232cf2](https://github.com/vuejs/vue/commit/2232cf2885989bf225e72e2124d804597ebf715a)
 
+`sd-each` 支持$index, 在有mutation时，需要updateIndexes()
 
+---
 
+#### array methods should be inenumerable [331f03b](https://github.com/vuejs/vue/commit/331f03b2fd5ec7dfd212c92ef181e82dd4ddb6f6)
+
+嗯，array methods自己的扩展，并不是广义性的，用户也很难会去用。
+
+---
+
+#### detach container before batch DOM updates for sd-each [98d1108](https://github.com/vuejs/vue/commit/98d1108dd1851c706a358a9400a241c6e430debd)
+
+#### avoid no parent detach [61e897e](https://github.com/vuejs/vue/commit/61e897ea8861355c84ca2a0090a7b8d65084c552)
+
+批量更新
+
+类似domfragment的思想，性能优化
+
+---
+
+#### implement $ event methods, optimize for minification [a21e890](https://github.com/vuejs/vue/commit/a21e8907d13a9df12ea89155626321779997f66c)
+
+`src/compiler.js` 中template解析部分提取出来成为`compiler.setupElement(options)`
+
+---
