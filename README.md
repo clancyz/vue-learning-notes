@@ -2605,3 +2605,162 @@ vue的测试覆盖率是恐怖的**100%**...
 
 ---
 
+
+#### use __proto__ interception for array methods [75dcb03](https://github.com/vuejs/vue/commit/75dcb03eec1ae6fc17d9c37ffa64272197433a04)
+
+拦截了`__proto__` 干掉了原来的`arrayMutators`
+
+but...`__proto__`作为原型访问器的特性，IE11以下是不支持的，确定要这样吗。。
+
+```js
+var ArrayProxy = Object.create(Array.prototype)
+ArrayProxy.remove = function () {...}
+ArrayProxy.replace = function () {...}
+ArrayProxy.mutateFilter = function () {...}
+
+
+arr.__proto__ = ArrayProxy
+
+
+```
+---
+
+#### simplify template API [c94ff6b](https://github.com/vuejs/vue/commit/c94ff6b03355829d4ae15f5f0352328ceea3d5b4)
+
+```js
+// determine el
+var el  = typeof options.el === 'string'
+    ? document.querySelector(options.el)
+    : options.el
+        ? options.el
+        : options.template
+            ? utils.makeTemplateNode(options)
+            : vm.templateNode
+                ? vm.templateNode.cloneNode(true)
+                : null
+```
+
+原来的方式是传这个ID：
+
+```html
+<script type="text/sd-template" sd-template-id="test"></script>
+```
+
+如果有options.el且是string => 搞这个dom
+
+如果有options.el是dom => 搞这个dom
+
+如果没有options.el, 有options.template(string): 通过utils.makeTemplateNode创建一个dom
+
+没有options.template，有vm.templateNode => 复制
+
+都没有 = = 那就木办法了 
+
+**这样做的好处：template可以任意传string, 原来的约束较大。**
+
+---
+
+#### fix observer mechanism [5ff47a8](https://github.com/vuejs/vue/commit/5ff47a83dde64f8f6a67e4543e3f522338d5b1ae)
+
+之前通过emitSet递归,对于`nested properties`（如a.b.c）有可能有重复emit的现象
+
+现在observe寄存到了各级属性里，直接emit即可
+
+```js
+if (alreadyConverted) {
+                emitSet(obj, ob, rawPath)
+            }
+```
+
+```js
+function emitSet (obj, observer) {
+    if (typeOf(obj) === 'Array') {
+        observer.emit('set', 'length', obj.length)
+    } else {
+        emit(obj.__values__)
+    }
+    function emit (values, path) {
+        var val
+        path = path ? path + '.' : ''
+        for (var key in values) {
+            val = values[key]
+            observer.emit('set', path + key, val)
+            if (typeOf(val) === 'Object') {
+                emit(val, key)
+            }
+        }
+    }
+}
+```
+---
+
+#### template changes again + allow further extend() for VMs [949e6e1](https://github.com/vuejs/vue/commit/949e6e1521003057c10a18d59211a5bc016ef6ec)
+
+抽离出来一个`src/template.js`
+
+`template`还是恢复到允许定义一个`template name`
+
+---
+
+#### sd-if and minor fixes [4209e27](https://github.com/vuejs/vue/commit/4209e272607278768a8c403b5b9b1a8fb78c57c1)
+
+`todo.md`
+
+> - sd-partial
+> - transition effects
+> - component examples
+
+完成了`sd-if`
+
+---
+
+#### implement new API per spec [4003fe2](https://github.com/vuejs/vue/commit/4003fe2b07cf53afabc3a28e2b0e75cc6fa31463)
+
+#### new init/extend options API [8a94192](https://github.com/vuejs/vue/commit/8a9419241e3a51ccfeb58c6a81a0df807653dd52)
+
+template => documentFragment
+
+`src/template.js` 又干掉了
+
+
+---
+
+#### directive interface change [9297042](https://github.com/vuejs/vue/commit/9297042b2d8e8dae9e4d241156f2da71e66fe201)
+
+template api的改动带来的directive改动 
+
+```js
+directive = Directive.parse(eachAttr, eachExp)
+=>
+directive = Directive.parse(eachAttr, eachExp, compiler, node)
+```
+---
+
+#### private directives and filters [eef0dc6](https://github.com/vuejs/vue/commit/eef0dc6ad16680e9e86b376b972cf711d4a8557b)
+
+用户的自定义directive和filter
+
+---
+
+#### ViewModel.extend() should also extend Object options [ec86b9f](https://github.com/vuejs/vue/commit/ec86b9faf94ee77827e182268c15e1396ae8e047)
+
+ViewModel.extend()
+
+```
+function extend (options) {
+    var ParentVM = this
+    // inherit options
+    options = inheritOptions(options, ParentVM.options, true)
+    ...
+}
+```
+`inheritOptions`是一个自定义的深拷贝,除去el和props:
+
+- props不需要拷贝因为已经在prototype上了
+- el只允许是一个`instance option`,所以也不需要拷贝 
+
+---
+
+
+
+
