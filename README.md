@@ -2871,5 +2871,35 @@ else if (el.tagName === 'SELECT') {
 } 
 ```
 
+---
+
+#### remove option to change interpolate tags [b2c4882](https://github.com/vuejs/vue/commit/b2c4882fdaafd5d7e6ce095cda26c7f83bf352b6)
+
+强势要求语法是{{}}，这种语法已经被广泛认同不需要再用户自定义
+
+---
 
 
+#### remove context binding related stuff [af342b7](https://github.com/vuejs/vue/commit/af342b75c0e5a20c01f7a868a34f16130e174e1f)
+
+是要把 get(ctx) {//do something to ctx} 这种东西干掉的节奏
+
+---
+
+#### 0.4.0 [b5bc232](https://github.com/vuejs/vue/commit/b5bc232ba25b6b86ec6c5cd709a50517563fd9ca)
+
+总结一下0.3.0 => 0.4.0
+
+- 各种测试覆盖
+- template API改进, 以及其他代码配合
+- 修复observer重复emit问题
+- 用户自定义directive和filter
+- each的性能优化,批量dom更新后再插入
+- each(repeat)加入$index
+- Seed.ViewModel.extend() => Seed.extend()
+- sd-model 
+
+
+## 0.4.0 （branch 0.10） done 
+
+---
