@@ -2788,3 +2788,88 @@ function extend (options) {
 `src/compiler.js` 中template解析部分提取出来成为`compiler.setupElement(options)`
 
 ---
+
+#### TODOs [81c705c](https://github.com/vuejs/vue/commit/81c705cd132038df5e02b42c57d1c1f07072080d)
+
+> - change the name to one that no one has used before...
+> - change the exposed var to a single one (capitalized constructor)
+> - change the default prefix to a single letter (depending on new name)
+> - change `sd-each` to `s-repeat`
+> - put all API methods on Seed
+> - add a method to observe additional data properties
+> - add `lazy` option
+> - add directive for all form elements, and make it consistent as `s-model`
+> - add escape: {{{ things in here should not be parsed }}}
+> - rename `props` option to `proto`
+> - properties that start with `_` should also be ignored and used as a convention: `$` is library properties, `_` is user properties and non-prefixed properties are data.
+
+- 开始思考名字的问题了...
+- `sd-each` to `s-repeat`
+- `additional data properties`是处理data属性的么？
+- lazy = lazyload? async load?
+- `v-model`前身
+- escape {{{}}} 这些不会被解析
+- 最后一点特性很给力，也是现在的`vue`有的特性：$开头的是库属性/方法；_开头是用户属性/方法；这两种开头的都不会被`observe`
+
+---
+
+#### move all API methods to Seed [65faa95](https://github.com/vuejs/vue/commit/65faa95549b100e71a69ad40c4919eb836dee2ca)
+
+这是... Find and replace吗...
+
+--
+
+#### rename `prop` option to `scope` [99b25b2](https://github.com/vuejs/vue/commit/99b25b299803c3723452c0668e8f5da38538e799)
+
+data => scope
+
+剧透的赶脚。。反正会改回来的。。
+
+---
+
+#### implement sd-model [1e90903](https://github.com/vuejs/vue/commit/1e90903da8294dda1750e72ae90dd311115601d5)
+
+#### sd-model [b8781c5](https://github.com/vuejs/vue/commit/b8781c54eba8f68e830471e0a80747afc31e14c2)
+
+
+
+
+`sd-model`统一代替了`sd-value`和`sd-checked`
+
+- input:checkbox
+- input:radio
+- input:text, select (及其他)
+
+这里对于`select`也这么玩？IE应该是不支持直接设select的value的
+
+```js
+update: function () {
+    this.el.checked = value == this.el.value
+}
+
+```
+
+---
+
+#### add sd-pre [b121a00](https://github.com/vuejs/vue/commit/b121a00a954dd54e52050f3de5bacc81472c4377)
+
+`sd-pre`这个directive的innerHTML也是会skip complilation的
+
+---
+
+#### IE9 compatibility [7b17f80](https://github.com/vuejs/vue/commit/7b17f80eeec308e5507744d9096b34c456b054e9)
+
+> 这里对于`select`也这么玩？IE应该是不支持直接设select的value的
+
+果然，注释笑喷
+
+```js
+else if (el.tagName === 'SELECT') {
+    // you cannot set <select>'s value in stupid IE9
+    ...
+    o.selectedIndex = index
+} 
+```
+
+
+
