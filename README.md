@@ -2875,7 +2875,9 @@ else if (el.tagName === 'SELECT') {
 
 #### remove option to change interpolate tags [b2c4882](https://github.com/vuejs/vue/commit/b2c4882fdaafd5d7e6ce095cda26c7f83bf352b6)
 
-强势要求语法是{{}}，这种语法已经被广泛认同不需要再用户自定义
+强势要求语法是{{}}，这种语法已经被广泛认同不需要再用户自定义，
+
+换言之，这里不需要过度设计
 
 ---
 
@@ -2903,3 +2905,192 @@ else if (el.tagName === 'SELECT') {
 ## 0.4.0 （branch 0.10） done 
 
 ---
+#### should ignore keys starting with $ or _ when observing an external ob… [3700d2c](https://github.com/vuejs/vue/commit/3700d2c1f02618ba30bde365a9dc6372f6339707)
+
+之前没有修改这里，补上
+
+---
+
+#### simple no-data directive [094a1fe](https://github.com/vuejs/vue/commit/094a1feca117f224bcfe95c0bebfaccef25b7c38)
+
+对于`no-data directive`，即是expression为空的directive
+比如一个用户自定义的directive, 如`v-btnloading`代表一个在点击时会有loading效果的button
+
+```
+<button v-btnloading></button>
+```
+只要在bind或update时做相应的调用即可
+
+---
+
+#### sd-id [5fa908d](https://github.com/vuejs/vue/commit/5fa908d1a292ed5b248cd9047fee7eb77fc15713)
+
+对于viewmodel定义一个id （又是剧透感，会被干掉的...）
+
+---
+
+#### fix sd-repeat + sd-viewmodel [fb6b4ea](https://github.com/vuejs/vue/commit/fb6b4eaca505f53a7421745951e2102d04a55237)
+
+`examples/repeated-vms.html` 里的这种用法感觉有点奇怪...
+
+---
+
+#### fix dependency tracking for nested values [db22a2a](https://github.com/vuejs/vue/commit/db22a2a0239d3d1e9eb39f1453f3770d04384df8)
+
+`complier.js` 会对复杂的binding做处理，调用`exp-parser.js`，返回getter和vars,利用vars进行createBinding
+
+```js
+return {
+            getter: new Function(args),
+            vars: Object.keys(hash)
+        }
+```
+
+```js
+ while (i--) {
+    v = result.vars[i]
+    if (!bindings[v]) {
+        compiler.rootCompiler.createBinding(v)
+    }
+}
+```
+但作者可能是在上个commit里面发现了vars返回的问题 
+
+如
+
+`item.title + msg` => vars=['item', 'msg']
+
+而实际应该需要： path=['item.title', 'msg']
+
+于是实现就是把vars再搞一遍匹配 
+
+```js
+function getPaths (code, vars) {
+    // code: 'item.title + msg'
+    var pathRE = new RegExp("\\b(" + vars.join('|') + ")[$\\w\\.]*\\b", 'g')
+    // 上面例子就是/\b(item|msg)[$\w\.]*\b/g
+    return code.match(pathRE)
+    // ['item.title','msg']
+}
+
+```
+---
+
+#### restructure for functional tests, use CasperJS [412873f](https://github.com/vuejs/vue/commit/412873f5d89fe865e7096df7f58a763c508c4b15)
+
+函数测试使用了[CasperJS](https://github.com/casperjs/casperjs)
+
+这个并没有听说过= =后续有时间可以了解下 
+
+---
+
+#### use Object.create(null) for better hash [91d8528](https://github.com/vuejs/vue/commit/91d852863cbf95d1df11a25aa4a8081f18888dc4)
+
+
+注释说得很清楚了： `Object.create(null)`的结果是`prototype-less`
+
+```
+/**
+ *  Create a prototype-less object
+ *  which is a better hash/map
+ */
+function makeHash () {
+    return Object.create(null)
+}
+```
+
+这个问题我之前有看过...
+
+作为一个哈希or字典来说，显然是Object.create的结果好；因为它不inherit anything,
+更加纯净
+
+举例：
+```
+var a = {}
+var b = Object.create(null)
+
+```
+这样，如果你使用`a.toString` => function toString() { [native code]}
+
+看起来，toString这个key像已经被原型方法**占用**了, a作为哈希或字典就有点**不纯洁**
+
+定义var a = {}, 实际相当于：
+
+```
+var a = Object.create(Object.prototype)
+```
+
+---
+
+#### change model event to input, and try to fix it for IE9 (not tested) [dd68ea2](https://github.com/vuejs/vue/commit/dd68ea2cc132ef8767e76a24b0d524f797bb6043)
+
+对IE9的鄙视之情跃然纸上
+
+```
+// fix shit for IE9
+// since it doesn't fire input on backspace / del / cut
+if (isIE) {
+    el.addEventListener('cut', self.set)
+    el.addEventListener('keydown', function (e) {
+        if (e.keyCode === 46 || e.keyCode === 8) {
+            self.set()
+        }
+    })
+}
+```
+---
+
+#### add teardown option; tests for $destroy() [5ffa301](https://github.com/vuejs/vue/commit/5ffa30146773a62afdc2515029bfb208f2a5da26)
+
+`teardown`这个option，如果传入了，就在`vm.$destroy`的时候调用 
+
+---
+
+#### move $index to VM instead of item, add $parent & $collection [db284ff](https://github.com/vuejs/vue/commit/db284ffa94bac19dff4111a255a7fd2664541579)
+
+设置完`parent vm`的时候把`child vm`就搞到`parent vm`上去，而不是搞到整个`vm`上
+
+---
+
+#### test implementation [8ba58dd](https://github.com/vuejs/vue/commit/8ba58dd795184e89461c47fe282eaac3e6159e30)
+
+#### transition working with sd-if + sd-repeat (TODO: $destroy) [36da0a7](https://github.com/vuejs/vue/commit/36da0a783c54c9b0f3fa730993c3b917b86ca5de)
+
+内置directives中的show, visible,if等dom操作统一到了`transition.js`上
+
+changeState: enter/leave的时候调用的函数
+
+这个API设计看起来有些别扭。。
+
+```js
+/**
+  *  stage:
+  *  1 = enter
+  *  2 = leave
+  */
+module.exports = function (el, stage, changeState, init) {
+    ...
+    if (stage > 0) { // enter
+        ...
+    } else { // leave
+        cl.add(className)
+        el.addEventListener(endEvent, onEnd)
+    }
+}
+```
+这里endEvent='transitionEnd'，but这个事件`stupid IE9`是不支持的哇 =  =
+
+目测这种设计也会干掉...
+
+---
+
+#### meta [23c98cb](https://github.com/vuejs/vue/commit/23c98cb505489d237a65dcaeaecf0681e7a2af5a)
+
+
+> - IE9+ (IE9 needs [classList polyfill](https://github.com/remy/polyfills/blob/master/classList.js) and doesn't support transitions)
+
+看来是考虑了这一点了。。
+
+---
+
+
