@@ -3167,4 +3167,128 @@ sd-on="click: this.a = 'b'"
 
 ---
 
+#### split multiple expressions by unquoted commas [88ebff6](https://github.com/vuejs/vue/commit/88ebff66558c6be890a1f694fdd8b09a20d7eaa7)
+
+不带引号的逗号 
+
+'ffsef + "fse,fsef"' 带引号的
+
+'fsef,fsf:fsefsef' 不带引号的，需要split 
+
+这种逗号的场景举例：
+
+```js
+sd-class="
+        completed : todo.completed,
+        editing   : todo == editedTodo
+    "
+```
+
+---
+
+#### fix sd-model selection position issue [3eba564](https://github.com/vuejs/vue/commit/3eba564120c7ee161bd855d4447d3f4565c68d71)
+
+```js
+ // if this directive has filters
+// we need to let the vm.$set trigger
+// update() so filters are applied.
+// therefore we have to record cursor position
+// so that after vm.$set changes the input
+// value we can put the cursor back at where it is
+```
+
+如果有filter,那是需要执行filter方法的即update()
+
+鼠标位置这个东西也要修。。这个修的意义是？暂时没明白
+
+如果没有filter, lock = true时，`model.js`中的update()就不会执行了
+
+```js
+function () {
+    // no filters, don't let it trigger update()
+    self.lock = true
+    self.vm.$set(self.key, el[attr])
+    self.lock = false
+}
+```
+
+---
+
+#### only emit get events during deps parsing - improves perf [23bd49f](https://github.com/vuejs/vue/commit/23bd49fa0814b3a07317f1f8eb53c35ad25fe59f)
+
+只在做`computed properties`的依赖分析时用到`emit`，优化性能
+
+`dep-parser.js`
+
+```js
+parse: function (bindings) {
+        ...
+        observer.active = true
+        bindings.forEach(catchDeps)
+        observer.active = false
+        ...
+    }
+```
+在`defineProperty`时就会去看这个标志位active，不需要频繁emit
+
+---
+
+#### New ExpParser implementation [bc0fd37](https://github.com/vuejs/vue/commit/bc0fd377d57ba67f27e04f6fee57d9b1b66fa938)
+
+`exp-parser.js`中新增getRel()
+
+例如对于`sd-checked="a.b"`
+
+这个函数的作用是找到一个vm property(a)的真正owner vm 
+
+同时，如果没有当前的path(a.b)则通过compiler.createBinding(path) 创建一个
+
+---
+
+#### fix input event handler for Chinese input methods [4e6ad72](https://github.com/vuejs/vue/commit/4e6ad727094a1c0b3e30d04db0d8528fa82be0ec)
+
+这个真是闻所未闻，hack原理又是啥？。。。没弄明白
+
+先抄下来吧
+
+```js
+try {
+    cursorPos = el.selectionStart
+} catch (e) {}
+// `input` event has weird updating issue with
+// International (e.g. Chinese) input methods,
+// have to use a Timeout to hack around it...
+setTimeout(function () {
+    self.vm.$set(self.key, el[attr])
+    if (cursorPos !== undefined) {
+        el.setSelectionRange(cursorPos, cursorPos)
+    }
+}, 0)
+```
+
+---
+
+#### add `replace` option & tests [0419b05](https://github.com/vuejs/vue/commit/0419b05535baa7e1ac4e1d569f2d50973073916a)
+
+如果传入的option里设置`replace=true`，原来在dom上的声明式标签会被完全替换掉
+
+---
+
+#### 一堆fixes & tests...
+
+---
+
+#### 0.6.0 - rename to VueJS [218557c](https://github.com/vuejs/vue/commit/218557cdec830a629252f4a9e2643973dc1f1d2d)
+
+
+终于取了个`never used before`的名字，感觉是0.5.0~0.6.0最大的改动 = =
+
+## 0.6.0 （branch 0.10） done 
+
+---
+
+
+
+
+
 
