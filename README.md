@@ -22,11 +22,14 @@ PS：每个commit的标题，当然不能复制粘贴手写... chrome snippet来
 
 ```js
 (function () {
-    let href = window.location.href,
-        key = window.location.pathname.match(/(commit\/)[\w]+/g)[0].split('/')[1],
-        shortKey = key.slice(0,7),
-        commitTitle = document.querySelector('.commit-title').innerText,
-        result = `#### ${commitTitle} [${shortKey}](${href})`;
+    let href = window.location.href;
+    let key = window.location.pathname.match(/(commit\/)[\w]+/g)[0].split('/')[1];
+    let shortKey = key.slice(0,7);
+    let commitTitle = document.querySelector('.commit-title').innerText;
+    let $commitDesc = document.querySelector('.commit-desc');
+    let commitDesc = $commitDesc ? $commitDesc.innerText : '';
+    let commitText = (commitTitle + commitDesc).replace(/……/g, '');
+    let result = `#### ${commitText} [${shortKey}](${href})`;
     console.log(result);    
 })();
 ```
@@ -3450,7 +3453,132 @@ Observer.observe(scope, '', compiler.observer)
 
 ---
 
+#### async batch update - first pass [5c73a37](https://github.com/vuejs/vue/commit/5c73a378ac1f67d05a3bf83816b4dfcde247bd0c)
 
+异步的批量update, `batch.js`实现得很简洁 
 
+binding.js在 update or refresh时均会使用batch.queue()
 
+另外，viewmodel.js中transition的异步callback部分 
+
+把requestAnimationFrame 换成了 setTimeout(func, 0)
+
+猜测可能是更快的异步执行？
+
+ 因为requestAnimationFrame每秒只能触发60以下次（60FPS）
+
+setTimeout(func, 0)可以触发200+次 （最小间隔约是4ms~10ms)。
+
+---
+
+#### nextTick phantomjs fix, unit tests for batcher, config() api addition [c7b2d9c](https://github.com/vuejs/vue/commit/c7b2d9ca347ad8a3171fdb82cc1a2f343c92a07f)
+
+搞回了`nextTick`, 并在`batcher.js`里面换回了nextTick
+
+仍不知道作者使用setTimeout和requestAnimationFrame之间的标准。。
+
+---
+
+#### avoid duplicate Observer.convert() [331bcc6](https://github.com/vuejs/vue/commit/331bcc673f143c9034b2fa78fc3a66e09a59cd48)
+
+```
+// if the data object is already observed, but the key
+// is not observed, we need to add it to the observed keys.
+if (ob && !(key in ob.values)) {
+    Observer.convert(data, key)
+}
+```
+
+比如在data和methods里面都没有定义的key出现了，那么要使用Observer.convert
+
+如： 
+
+```
+{
+    data:{},
+    methods: {
+        a: function () {
+            // this.b没有被定义过
+            var value = this.b && this.b;
+            if (!value) value = this.b = 'c'
+            return value
+        }
+    }
+}
+```
+
+如果不加入这个条件，因为data/methods中的key都已经observed，会重复observe
+
+---
+
+#### test using gulp plugins instead [c7f8a68](https://github.com/vuejs/vue/commit/c7f8a68d4afc367915820de402b18095f696b8ea)
+
+部分test用上了gulp, 时髦啊...
+
+---
+
+#### Async fixes [c71a908](https://github.com/vuejs/vue/commit/c71a9085a74befcce429840ad2c36a26d2f15d34)
+
+vm.$watch 现在支持异步
+v-model不支持异步是个原先的bug. 这里修复了
+
+---
+
+#### perfectly resolve Chinese input methods issue with composition events [1e58721](https://github.com/vuejs/vue/commit/1e587210d7501434f4120f21923ff4b7118e2356)
+
+利用`compositionstart`和`compositionEnd`事件解决中文输入问题 
+
+不知道有多少人跟我反应一样“卧槽居然还有这事件”
+
+学习了一下[compositionEvents](https://developer.mozilla.org/en-US/docs/Web/API/CompositionEvent)
+
+mark~
+
+---
+
+#### meta [74e2f38](https://github.com/vuejs/vue/commit/74e2f389309cac164a000916296d57c7b28903ab)
+
+作者的开发思想
+
+> Technically, it provides the **ViewModel** layer of the MVVM pattern, which connects the **View** (the actual HTML that the user sees) and the **Model** (JSON-compliant plain JavaScript objects) via two way data-bindings.
+> 
+> Philosophically, the goal is to allow the developer to embrace an extremely minimal mental model when dealing with interfaces - there's only one type of object you need to worry about: the ViewModel. It is where all the view logic happens, and manipulating the ViewModel will automatically keep the View and the Model in sync. Actuall DOM manipulations and output formatting are abstracted away into **Directives** and **Filters**.
+
+---
+
+#### vm.$emit() is now self only, propagating events now triggered by $dispatch() [354f559](https://github.com/vuejs/vue/commit/354f559215bb3f01707bec23877cff47929da719)
+
+新增`$emit`用于触发自己的事件，`$dispatch`用来触发冒泡事件，和现在一致了
+
+---
+
+#### add support for interpolation in html attributes [a2e287f](https://github.com/vuejs/vue/commit/a2e287f0b98a6ec49d330d23b55d4daf20d20535)
+
+允许在正常的html属性里面带上{{}}
+
+> // non directive attribute, check interpolation tags
+
+like this: 
+
+```
+<img src="{{url}}"></img>
+```
+
+---
+
+#### make exp-parser deal with cases where strings contain variable names [212990a](https://github.com/vuejs/vue/commit/212990a3bb10e4a6d5554dbd20300b7a336a46be)
+
+> exp: "'\"test\"' + test + \"'hi'\" + hi"
+
+我觉得这算是一种edge case了, 真这么用的人...
+
+---
+
+#### Component Change [04249e3](https://github.com/vuejs/vue/commit/04249e320ab5aa31fe64c4657d9a319b25c0b311)
+
+- `v-component` now takes only a string value (the component id)
+- `Vue.component()` now also registers the component id as a custom element
+- add new directive: `v-with`, which can be used in combination with `v-component` or standalone
+
+---
 
