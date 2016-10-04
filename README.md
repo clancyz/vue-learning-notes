@@ -18,6 +18,19 @@ $ grunt (--force)
 
 ---
 
+PS：每个commit的标题，当然不能复制粘贴手写... chrome snippet来一套
+
+```js
+(function () {
+    let href = window.location.href,
+        key = window.location.pathname.match(/(commit\/)[\w]+/g)[0].split('/')[1],
+        shortKey = key.slice(0,7),
+        commitTitle = document.querySelector('.commit-title').innerText,
+        result = `#### ${commitTitle} [${shortKey}](${href})`;
+    console.log(result);    
+})();
+```
+
 
 #### initial setup [83fac01](https://github.com/vuejs/vue/tree/83fac017f96f34c92c3578796a7ddb443d4e1f17)
 
@@ -3287,6 +3300,155 @@ setTimeout(function () {
 
 ---
 
+#### lifecycle hooks [e04553a](https://github.com/vuejs/vue/commit/e04553a0a433322cbcf7738b1d9716d340d426de)
+
+绝赞~！
+
+生命周期钩子出现~ 
+
+类似：
+
+```
+if (ready) {
+    ready.call(vm, options)
+}
+```
+
+vm和options作为arguments可以进行操作。
+
+- beforeCompile / created
+- afterCompile / ready
+- beforeDestroy
+- afterDestroy
+
+
+---
+
+#### component refactor [628c42c](https://github.com/vuejs/vue/commit/628c42cc9f33172538d672428a67f5ef041a633a)
+
+`src/directives/component.js` 专门用于处理组件化 
+
+原来的自定义`elements`被干掉
+
+`test/functional/fixtures/encapsulation.html` 来看，现在的组件化方式还不太友好。
+
+---
+
+#### DOM convenience methods [d132fdc](https://github.com/vuejs/vue/commit/d132fdc500572a56380bed917341a986e60befbc)
+
+- $appendTo
+- $remove
+- $before
+- $after
+- query （querySelector）
+
+---
+
+#### enteredView/leftView hooks & test [9a132a9](https://github.com/vuejs/vue/commit/9a132a96375f910e160e3a0e8d39a931553cb38b)
+
+增加一对transition的钩子：
+
+- enterView
+- leftView
+
+---
+
+#### v-model for content editable [9ec0259](https://github.com/vuejs/vue/commit/9ec0259df6b129ae2271ca8cf179fe6ecb07e572)
+
+v-model现在可以附加到`textarea`上 
+
+--- 
+
+#### dom method callbacks should be async. [070d5c0](https://github.com/vuejs/vue/commit/070d5c0e583a963379dd90f9d3169b590ffaf98d)
+
+出现了`utils.nextTick()`利用`requestAnimationFrame` 加载dom method的callback
+
+---
+
+#### observer rewrite [216e398](https://github.com/vuejs/vue/commit/216e398b22b835eb4b42b630f0943b86e98c08dd)
+
+defineProperty的set中先做了unoserve oldVal,再observe newVal
+
+```
+set: function (newVal) {
+    var oldVal = values[key]
+    unobserve(oldVal, key, observer)
+    values[key] = newVal
+    ensurePaths('', newVal, oldVal)
+    observer.emit('set', key, newVal)
+    observe(newVal, key, observer)
+}
+```
+---
+
+#### add benchmark for todomvc example [dc17a4e](https://github.com/vuejs/vue/commit/dc17a4eda865ca5e4c4830d4cdfe6aa6a4400322)
+
+加入了一个todomvc的简单benchmark
+
+---
+
+#### update benchmarks, remove attach/detach in v-repeat as its actually expensive in common use cases [f29be01](https://github.com/vuejs/vue/commit/f29be011db0152d2b21bd509bc95ff7640c5a4df)
+
+> remove attach/detach in v-repeat as its actually expensive in common use cases
+
+attach和detach不是为了批量更新dom而生的吗？为啥又干掉了？
+
+实际使用场景里面很少有大批量更新dom的情况？。。。
+
+---
+
+#### compiler rewrite - observe scope directly and proxy access through vm [14d8ce2](https://github.com/vuejs/vue/commit/14d8ce24a3e4063dce241ea8daae15cce14e4c85)
+
+`complier.js`做了比较大的改动 
+
+scope现在可以依附在complier身上了 
+
+先拷贝scope到vm里
+
+在hook后user可能改变了vm, 需要再搞一遍vm到scope 
+
+然后直接Observer.observe(scope, '', complier.observer)
+
+即进行path,def,emit等事情 
+
+```js
+
+ // init scope
+var scope = compiler.scope = options.scope || {}
+utils.extend(vm, scope, true)
+
+...
+
+// beforeCompile hook
+compiler.execHook('beforeCompile', 'created')
+// the user might have set some props on the vm 
+// so copy it back to the scope...
+utils.extend(scope, vm)
+// observe the scope
+Observer.observe(scope, '', compiler.observer)
+```
+
+---
+
+#### simplify v-repeat syntax [cd90e64](https://github.com/vuejs/vue/commit/cd90e647a7497b4eb3df0e85fcc497064d2005ce)
+
+#### simplify v-component usage [c75aa42](https://github.com/vuejs/vue/commit/c75aa42d77c4ae6c9f5adaf18b88062bc0f29cd0)
+
+改了之后更难用的即视感。。。
+
+---
+
+#### API change: split `scope` into `data` and `methods` [7c1d196](https://github.com/vuejs/vue/commit/7c1d196355c3d26e34b29b15d37347639f5f226a)
+
+> 开发者的大事，大快所有人心的大好事
+
+---
+
+#### "Release v0.7.0" [56fbe04](https://github.com/vuejs/vue/commit/56fbe047ff07922831d48853fb97c7318a32772d)
+
+## 0.7.0 （branch 0.10） done 
+
+---
 
 
 
