@@ -3093,4 +3093,78 @@ module.exports = function (el, stage, changeState, init) {
 
 ---
 
+#### sniff transitionend event [cd80fe4](https://github.com/vuejs/vue/commit/cd80fe4bbb49c1032f6d37b63d439c8ddcd6b4e6)
+
+兼容性处理
+
+```js
+function sniffTransitionEndEvent () {
+    var el = document.createElement('div'),
+        defaultEvent = 'transitionend',
+        events = {
+            'transition'       : defaultEvent,
+            'MozTransition'    : defaultEvent,
+            'WebkitTransition' : 'webkitTransitionEnd'
+        }
+    for (var name in events) {
+        if (el.style[name] !== undefined) {
+            return events[name]
+        }
+    }
+}
+```
+---
+
+#### change sd-viewmodel to sd-component, allow direct use of Objects in S… [5ad8ede](https://github.com/vuejs/vue/commit/5ad8edeb085d46e954da0ecb42b9cb51bf1fbe12)
+
+
+
+```
+<div class="vm" sd-component="vm-test">{{vmMsg}}</div>
+
+```
+
+
+```js
+var T = Seed.extend({
+    components: {
+        'vm-test': Seed.extend({
+            scope: {
+                vmMsg: 'component works'
+            }
+        })
+    },
+    ...
+})
+
+```
+
+---
+
+#### sd-on can now execute expressions [9dc45ea](https://github.com/vuejs/vue/commit/9dc45ea9f62820d88dcf0baf0e8c59e26ebd039b)
+
+```
+sd-on="click: this.a = 'b'"
+```
+
+---
+
+#### travis [f584c84](https://github.com/vuejs/vue/commit/f584c844b767c9ee23e9c0292a2532dce9b55adf)
+
+使用了[travis ci](#### travis [f584c84](https://github.com/vuejs/vue/commit/f584c844b767c9ee23e9c0292a2532dce9b55adf))
+
+---
+
+#### 0.5.0 [8ade1f4](https://github.com/vuejs/vue/commit/8ade1f4c25238d8e1b99b8851181ad8af242b384)
+
+
+## 0.5.0 （branch 0.10） done 
+
+0.4.0 => 0.5.0
+
+- 主要加入的功能是transition
+- 引入Casper.js和travis ci做持续集成
+
+---
+
 
