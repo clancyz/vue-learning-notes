@@ -3582,3 +3582,138 @@ like this:
 
 ---
 
+#### Fix inline partial parentNode problemDirectives inside inline partials would get the fragment as the parentNodeif they are compiled before the partial is appended to the correct parentNode.Therefore keep the reference of the fragment's childNodes, append it,then compile afterwards fixes the problem. [5f21eed](https://github.com/vuejs/vue/commit/5f21eed2c9ed135d55e7d3d1eed696522bebe68e)
+
+对于partial的处理，在append fragment之后再进行compile
+
+否则其children的parentNode会不对 
+
+---
+
+#### bindings that are not found are now created on current compiler instead of root [1fb885b](https://github.com/vuejs/vue/commit/1fb885b9fa312bb5bcf5a679310683bd7793212a)
+
+当一个baseKey(如a.b的a)不在当前vm的时候，之前是去rootComplier.createBinding,
+
+现在是递归地找complier.parentComplier, 就近地createBinding
+
+---
+
+#### clean up get binding owner compiler logic [9a45f63](https://github.com/vuejs/vue/commit/9a45f63f343da1f0e41b0d9e2896713e6378089d)
+
+`compiler.bindings = makeHash()` 这样初始化 
+
+后面在function check(key) 中就不用再去检查hasOwnProperty
+
+---
+
+#### should lock during composition in all cases [61e4dd1](https://github.com/vuejs/vue/commit/61e4dd13baebe748b40a186da89b63096b911c09)
+
+以前是仅当Expression中带有filter时才进行`composition lock`
+
+现在是所有的情况均进行lock
+
+---
+
+#### update() is now optional when creating a directive [d3ebd42](https://github.com/vuejs/vue/commit/d3ebd42dd86a4abb4e6bbe7136833c1943726ec1)
+
+当进行一个自定义directive时，有可能只是初始化一次(once)之后就不再变化了 
+
+所以这个update是optional的
+
+---
+
+#### simplify binding mechanism, remove refresh() [f139f92](https://github.com/vuejs/vue/commit/f139f9271a0aefe25d5f7d4f12844143ec35ea7b)
+
+原来对于`computed properties`，在数据更新时用refresh()方法； 
+
+现在用一个eval()把所有的properties都合并到一块统一使用_update()
+
+```js
+/**
+ *  Return the valuated value regardless
+ *  of whether it is computed or not
+ */
+BindingProto.eval = function () {
+    return this.isComputed && !this.isFn
+        ? this.value.$get() // is computed
+        : this.value // not computed
+}
+
+```
+
+---
+
+#### do not modify original computed property getter/setters [62fd49a](https://github.com/vuejs/vue/commit/62fd49abd231b1bbce29e099abcd2367d97ef077)
+
+修改发生在`CompilerProto.define`即说明是个`root-level binding` (即非expression, 不是a.b,或带$parent/$root) 的
+
+对于这种binding, ` Object.defineProperty`的时候不设置`enumerable`即默认为false
+
+compiler.data即是原始用户传入的data部分
+
+```js
+
+Object.defineProperty(vm, key, {
+    get: binding.isComputed
+        ? function () {
+            // 原先是compiler.data[key].$get
+            return binding.value.$get()
+        }
+        : function () {
+            return compiler.data[key]
+        },
+    set: binding.isComputed
+        ? function (val) {
+            // 原先是compiler.data[key].$set
+            if (binding.value.$set) {
+                binding.value.$set(val)
+            }
+        }
+        : function (val) {
+            compiler.data[key] = val
+        }
+})
+
+```
+
+
+
+---
+
+#### separate computed properties into `computed` option [7a6169c](https://github.com/vuejs/vue/commit/7a6169caf9aed817af2779b1f9beb3bc21550ad4)
+
+很牛逼的举动，
+
+- 即方便了用户（后续还可以不用去死板地写$get function), 也可以和data/method区分开来，方便代码组织
+
+- 也方便了自己（computed中的东西必须是computed property）
+
+---
+
+#### refactor Compiler.createBinding [50a7881](https://github.com/vuejs/vue/commit/50a7881b2f6efd550630543770f2752a2cfd83e6)
+
+vm中加入了computed之后， createBinding做一次重构 
+
+看下面这个代码多么的清晰！
+
+```js
+if (binding.root) {
+    // this is a root level binding. we need to define getter/setters for it.
+    if (computed && computed[key]) {
+        // computed property
+        compiler.defineComputed(key, binding, computed[key])
+    } else {
+        // normal property
+        compiler.defineProp(key, binding)
+    }
+} 
+``` 
+
+CompilerProto.define => CompilerProto.defineProp + CompilerProto.defineExp 
+
+分而治之，代码也更加清晰易读，赞~ 
+
+---
+
+
+
