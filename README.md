@@ -3696,6 +3696,7 @@ vm中加入了computed之后， createBinding做一次重构
 
 看下面这个代码多么的清晰！
 
+
 ```js
 if (binding.root) {
     // this is a root level binding. we need to define getter/setters for it.
@@ -3707,7 +3708,8 @@ if (binding.root) {
         compiler.defineProp(key, binding)
     }
 } 
-``` 
+
+```
 
 CompilerProto.define => CompilerProto.defineProp + CompilerProto.defineExp 
 
@@ -3716,4 +3718,219 @@ CompilerProto.define => CompilerProto.defineProp + CompilerProto.defineExp
 ---
 
 
+#### Release-v0.8.0 [882c16c](https://github.com/vuejs/vue/commit/882c16c76ec0790ccf60856385ea493c9369cd63)
 
+## 0.8.0 （branch 0.10） done 
+
+
+---
+
+#### defer child components compilation [3cb7027](https://github.com/vuejs/vue/commit/3cb7027725a548acb0776a6bf5d983f4058bf73b)
+
+把child components延迟compile,这样在child components进行compile时，其parent已经收集了所有的binding
+
+---
+
+#### Fix #65A 
+computed property can depend on properties on repeated items.When new items are added to the Array, the dependency collection has already been done so their properties are not collected by the computed property on the parent. We need to re-parse the dependencies in such situation, namely push, unshift, splice and when the entireArray is swapped. Also included casper test case by @daines. [a7dfb3f](https://github.com/vuejs/vue/commit/a7dfb3f4c89b84cc6dcfbb7ca17c1e4caa06d5f6)
+
+针对这样的case:
+
+```
+<body>
+    <form id="form">
+        <p v-repeat="items">
+            <input type="text" name="text{{$index}}" v-model="text">
+        </p>
+        <button v-on="click: add" id="add">Add</button>
+        <p id="texts">{{texts}}</p>
+    </form>
+    <script>
+        var app = new Vue({
+            el: '#form',
+            data: {
+                items: [
+                    { text: "a" },
+                    { text: "b" }
+                ]
+            },
+            methods: {
+                add: function(e) {
+                    this.items.push({ text: "c" })
+                    e.preventDefault()
+                }
+            },
+            computed: {
+                texts: function () {
+                    return this.items.map(function(item) {
+                        return item.text
+                    }).join(",")
+                }
+            }
+        })
+    </script>
+</body>
+```
+
+当点击add button时，input会多加一个:
+
+input:a
+input:b
+input:c
+
+但是在input:c中输入文字的时候，{{texts}}没有改变 
+
+原因作者说得很清楚了。在这个例子里面texts是一个computed property 
+
+当array push的时候，依赖收集已经完成,只对input:a和input:b有双向绑定
+
+那么在push完成之后，需要对input:c也有双向绑定
+
+对于 `push/unshift/splice` 这些改变数组长度的行为 ：
+
+mutationListener => changed()里面再进行一次parseDeps()
+
+```js
+elf.mutationListener = function (path, arr, mutation) {
+    ...
+    if (method === 'push' || method === 'unshift' || method === 'splice') {
+        self.changed()
+    }
+}
+
+...
+
+/**
+    *  Notify parent compiler that new items
+    *  have been added to the collection, it needs
+    *  to re-calculate computed property dependencies.
+    *  Batched to ensure it's called only once every event loop.
+    */
+changed: function () {
+    var self = this
+    if (self.queued) return
+    self.queued = true
+    setTimeout(function () {
+        self.compiler.parseDeps()
+        self.queued = false
+    }, 0)
+},
+```
+
+---
+
+#### text-parser deal with triple mustache [1c6dacf](https://github.com/vuejs/vue/commit/1c6dacf5b0bc56b27f593a67f96f855d4a57ff6d)
+
+#### {{{ }}} tags for unescaped html [58dd07e](https://github.com/vuejs/vue/commit/58dd07e5756eb9bc7c5d004985dd1122659db0c8)
+
+这两个commit解决`{{{xxx}}}`的问题，如果expression match则里面的xxx当做html来解析
+
+---
+
+#### rewrite lifecycle hook system [d75ee62](https://github.com/vuejs/vue/commit/d75ee6234e8729694b61f4b63a73f40a8aa27711)
+
+每个hook就叫一个名字比较好...
+
+---
+
+#### make sure a vm and its data are properly removed from Array when $destroy is called directly [efcaad1](https://github.com/vuejs/vue/commit/efcaad1b8bc48ec482b9dc45077c3ae03a5fef40)
+
+当$destroy的时候,vm和data都要从collection里面清除掉 
+
+---
+
+#### reintroduce v-style [120af4b](https://github.com/vuejs/vue/commit/120af4b77436b9100d93165274c793662684ebc1)
+
+style从新搞回来了
+
+---
+#### update todomvc example to be same as lended version [cb1d69c](https://github.com/vuejs/vue/commit/cb1d69c66c10ba224eeeb3af19689d450c0fce2b)
+
+尤大带逛github系列：
+
+后面的`vue-router`是否也参考了这个[director](https://github.com/flatiron/director)呢。。。
+
+这东西最后一个commit已经是2 years ago了
+
+先mark，待研究
+
+---
+
+#### add isLiteral option for custom directive [6673828](https://github.com/vuejs/vue/commit/66738285422aea7ce6fdd5ca500b5fc17bba876b)
+
+expression仅是字面量的场景应该很少吧
+
+---
+
+#### Fix IE directive not compiled issueIn the TodoMVC example, when `v-show` is compiled first, it adds aninline style attribute to the node. Since IE seems to handle the orderof attributes in `node.attributes` differently from other browsers,this causes some directives to be skipped and never compiled. Simplycopy the attribtues into an Array before compiling solves the issue. [0f448b8](https://github.com/vuejs/vue/commit/0f448b8678b2d64a87632783761d01eba668cb27)
+
+又是IE9的奇怪bug 
+
+---
+
+#### common xss protection [9c2bb94](https://github.com/vuejs/vue/commit/9c2bb9465e4fba4f36d7be3986ae4bf1b484f4da)
+
+防了下constructor的override攻击
+
+例如这个：
+
+```
+toString.constructor.prototype.toString=toString.constructor.prototype.call;
+
+["a","alert(1)"].sort(toString.constructor);
+```
+
+---
+
+#### select[multiple] support [e16f910](https://github.com/vuejs/vue/commit/e16f910948e50968cba914b704fc844a8dc92a8e)
+
+支持 select multiple属性，但是。。。这个估计也很少人会用吧 
+
+multiselect基本所有人都是用组件的...原生的太坑了 
+
+---
+
+#### plugin interface [a891df2](https://github.com/vuejs/vue/commit/a891df220f003c729b57bf4d84b4c3b50bc7b462)
+
+又一个被广泛应用的接口出现了 = = 
+
+use和install => 直接操作viewModel 
+
+---
+
+#### better xss mitigation [0bee5a0](https://github.com/vuejs/vue/commit/0bee5a08e5c3caddfbba4b536e62dd5c8954bc73)
+
+在`constructor`基础上加入了防止`unicode`形式的攻击 
+
+
+---
+#### revert repeated item $destroy behavior [ce4342b](https://github.com/vuejs/vue/commit/ce4342bbfce16ec68ea1e5673fa3a8d8ddc814e0)
+
+没想明白为什么这部分又搞回去了。。。=  =
+
+```
+// in case `$destroy` is called directly on a repeated vm
+// make sure the vm's data is properly removed
+
+item.$compiler.observer.on('hook:afterDestroy', function () {
+    col.remove(data)
+})
+```
+
+---
+
+#### remove isLiteral option [f6ee24a](https://github.com/vuejs/vue/commit/f6ee24a5cfb05ffd80e7b66bf3d0fdaa1ef0431c)
+
+> expression仅是字面量的场景应该很少吧
+
+果然干掉了 (＞◡❛)
+
+---
+
+#### add v-cloak [c599bed](https://github.com/vuejs/vue/commit/c599bed93d4fab264075aacef0496418ab7dcd39)
+
+`v-cloak` 作用主要是和`display:none`结合使用，编译完成后才展示
+
+要不一进来会是{{}}这种标签展示在界面上的话不太好看的嘛
+
+---
