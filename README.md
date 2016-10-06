@@ -4123,4 +4123,299 @@ CompilerProto.addListener = function (listener) {
 
 ---
 
+#### make primitive arrays work with computed property [8d65a07](https://github.com/vuejs/vue/commit/8d65a078f3c1bdf82e655e3745508533b6c15df3)
 
+`src/repeat.js`
+
+change:$value时再set一次，触发computed property更新
+
+```js
+// for non-object values, listen for value change
+// so we can sync it back to the original Array
+if (nonObject) {
+    item.$compiler.observer.on('change:$value', function (val) {
+        self.lock = true
+        self.collection.set(item.$index, val)
+        self.lock = false
+    })
+}
+```
+
+---
+
+#### allow nested path for computed properties that return objects [bedcb22](https://github.com/vuejs/vue/commit/bedcb22f9c08a29fd3c2399658775a6b0908a8fe)
+
+在进行createBinding时：如果这个path是nested path(带.的) 
+
+继续进行一次defineExp, 当做表达式来处理 
+
+```js
+else if (computed && computed[key.split('.')[0]]) {
+            // nested path on computed property
+            compiler.defineExp(key, binding)
+        }
+```
+
+---
+
+#### filterBy & orderBy first pass [336d06d](https://github.com/vuejs/vue/commit/336d06de1d0bddf7159d17db0cd218ca7a099358)
+
+对数组加入filterBy和orderBy的filter
+
+
+---
+
+#### v-component & v-with refactor [665520f](https://github.com/vuejs/vue/commit/665520f59b7e6cb33bbfc3c6ae0d8d772941e550)
+
+v-component也成了一个内置directive
+
+
+---
+
+
+#### refactor compile priority order [775948d](https://github.com/vuejs/vue/commit/775948d31f55a8638f59d5830f2136f294a71731)
+
+compile的先后顺序: repeat => view => component
+
+--- 
+
+
+#### array diff WIP [a847fdd](https://github.com/vuejs/vue/commit/a847fddc2f7b1a66aa04e77886d6b9a4bd6ed012)
+
+#### clean up array diff algorithm [ed0be36](https://github.com/vuejs/vue/commit/ed0be36de3866a4829d48277c40fc8c6f90febf6)
+
+大动作~！
+
+`src/repeat.js` 中的diff()方法：
+
+在Array update时，去跟原Array进行对比，做到**最小力度**的dom操作
+
+可以看做一种`v-dom`的思想吧
+
+原来的`mutationHandlers`全部干掉了，因为都可以理解成是一种diff
+
+update时：
+
+```js
+ this.vms = this.oldCollection
+            ? this.diff(collection, isObject)
+            : this.init(collection, isObject)
+
+```
+来完整地看一下diff方法的实现：
+
+```js
+/**
+    *  Diff the new array with the old
+    *  and determine the minimum amount of DOM manipulations.
+    */
+diff: function (newCollection, isObject) {
+
+    var i, l, item, vm,
+        oldIndex,
+        targetNext,
+        currentNext,
+        ctn    = this.container,
+        oldVMs = this.oldVMs,
+        vms    = []
+    // vms是diff后的结果Array,给个长度先
+    vms.length = newCollection.length
+
+    // first pass, collect new reused and new created
+    // 第一步是先把可以复用vm的和新创建的搞进来
+    for (i = 0, l = newCollection.length; i < l; i++) {
+        item = newCollection[i]
+        if (isObject) { // 对Object类型的处理
+            item.$index = i
+            // identifier存在，那么是可以复用的
+            if (item[this.identifier]) {
+                // this piece of data is being reused.
+                // record its final position in reused vms
+                item.$reused = true
+            } else {
+                // 这些就是新建的
+                vms[i] = this.build(item, i, isObject)
+            }
+        } else { // 这就是Array了 
+            // we can't attach an identifier to primitive values
+            // so have to do an indexOf...
+            oldIndex = indexOf(oldVMs, item)
+            if (oldIndex > -1) { // 说明在oldVM里面存在，可以复用
+                // record the position on the existing vm
+                oldVMs[oldIndex].$reused = true
+                oldVMs[oldIndex].$data.$index = i
+            } else {
+                // 新建
+                vms[i] = this.build(item, i, isObject)
+            }
+        }
+    }
+
+    // second pass, collect old reused and destroy unused
+    // 第二步，处理oldVM里面没有被reused的东西，干掉
+    for (i = 0, l = oldVMs.length; i < l; i++) {
+        vm = oldVMs[i]
+        item = vm.$data
+        if (item.$reused) {
+            vm.$reused = true
+            delete item.$reused
+        }
+        if (vm.$reused) {
+            // update the index to latest
+            // index要保持住
+            vm.$index = item.$index
+            // the item could have had a new key
+            // 参见objectToArray, 这个$key可能已经改变了
+            if (item.$key && item.$key !== vm.$key) {
+                vm.$key = item.$key
+            }
+            vms[vm.$index] = vm
+        } else {
+            // this one can be destroyed.
+            delete item[this.identifier]
+            vm.$destroy()
+        }
+    }
+
+    // final pass, move/insert DOM elements
+    // 最后一步做dom操作
+    i = vms.length
+    while (i--) {
+        vm = vms[i]
+        item = vm.$data
+        targetNext = vms[i + 1]
+        if (vm.$reused) {
+            // 搞位置，插入
+            currentNext = vm.$el.nextSibling.vue_vm
+            // 如果currentNext === targetNext说明没有必要做dom操作了
+            if (currentNext !== targetNext) {
+                if (!targetNext) {
+                    ctn.insertBefore(vm.$el, this.ref)
+                } else {
+                    ctn.insertBefore(vm.$el, targetNext.$el)
+                }
+            }
+            delete vm.$reused
+            delete item.$index
+            delete item.$key
+        } else { // a new vm
+            // 新创建的，insertBefore
+            vm.$before(targetNext ? targetNext.$el : this.ref)
+        }
+    }
+
+    return vms
+},
+```
+
+---
+
+#### enable $event in v-on expressions + enable e.preventDefault() [1b1d72e](https://github.com/vuejs/vue/commit/1b1d72ea5680e29eaa33c1648727dc19857bb8df)
+
+在dom上触发事件的时候把事件句柄e作为$event传入
+
+那么就可以this.$event了
+
+```js
+newHandler = function (e) {
+    e.targetEl = el
+    e.targetVM = targetVM
+    context.$event = e
+    handler.call(context, e)
+    context.$event = null
+}
+```
+---
+
+#### remove event delegation [423b54d](https://github.com/vuejs/vue/commit/423b54dfd41571fe45e7c46d465ad75665dc1b82)
+
+咋又干掉了？
+
+---
+
+#### also propagate array mutations in observer [e498191](https://github.com/vuejs/vue/commit/e49819118b1efed522bf81e664e03e15816d5d07)
+
+
+这是把dom的冒泡转移到了array data emitter的emit上吗。。。感觉很牛逼的样纸 =  =
+
+```js
+
+emitter
+    .on('set', function (key, val, propagate) {
+        if (propagate) propagateChange(obj)
+    })
+    .on('mutate', function () {
+        propagateChange(obj)
+    })
+
+...
+
+/**
+ *  Propagate an array element's change to its owner arrays
+ */
+function propagateChange (obj) {
+    var owners = obj.__emitter__.owners,
+        i = owners.length
+    while (i--) {
+        owners[i].__emitter__.emit('set', '', '', true)
+    }
+}
+
+```
+
+---
+
+#### expression cacheexpressions with the same signature are now cached! this dramaticallyimproves performance on large v-repeat lists with multiple expressions. [15a6733](https://github.com/vuejs/vue/commit/15a673388e14c1c9e2ef196aaee28f9a5cc17d4d)
+
+```js
+compiler.expCache = compiler.expCache || makeHash()
+...
+
+if (!getter) {
+        getter = this.expCache[exp] = ExpParser.parse(key, this, null, filters)
+    }
+```
+
+ExpParser.parse()后的结果被缓存，避免不必要的重复parse，提高性能 
+
+---
+
+#### add tree view test case [3be1141](https://github.com/vuejs/vue/commit/3be1141081bec448a6a54c495f8391403791024d)
+
+递归使用组件，cool
+
+---
+
+#### use more efficient Object check [c67685b](https://github.com/vuejs/vue/commit/c67685b713026ca0956e71adbd21ec5de3950fef)
+
+基本类型判断 
+
+这两种东东看来是有Benchmark上的区别？
+
+也要mark一下。。。
+
+```js
+/**
+    *  A less bullet-proof but more efficient type check
+    *  than Object.prototype.toString
+    */
+isObject: function (obj) {
+    return typeof obj === OBJECT && obj && !Array.isArray(obj)
+},
+
+/**
+    *  A more accurate but less efficient type check
+    */
+isTrueObject: function (obj) {
+    return toString.call(obj) === '[object Object]'
+},
+```
+
+---
+
+#### Release-v0.10.0 [cd53688](https://github.com/vuejs/vue/commit/cd53688d5364aef64aafc986c02e491f8cf90f82)
+
+
+## 0.10.0 （branch 0.10） done 
+
+---
