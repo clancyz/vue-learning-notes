@@ -4419,3 +4419,27 @@ isTrueObject: function (obj) {
 ## 0.10.0 （branch 0.10） done 
 
 ---
+
+#### Use more robust string -> fragment conversion Using the wrapper technique from jQuery so that utils.toFragment() can deal with table elements and SVG elements (with proper namespace) [c941fd6](https://github.com/vuejs/vue/commit/c941fd654e49a58c4345118ec63636c408e00d32)
+
+string转化成fragment的过程中，还有像Table,svg这样的东东
+
+借鉴了jquery和[component/domify](https://github.com/component/domify/blob/master/index.js)
+
+---
+
+#### bring back the rAF [e0fbc20](https://github.com/vuejs/vue/commit/e0fbc202d693e99f45bffe9eba74caa14d248162)
+
+服！
+
+---
+
+一小堆fixes...
+
+---
+
+#### Release-v0.10.6 [cf37f7e](https://github.com/vuejs/vue/commit/cf37f7efd6d63c0aa46b50c624816e645ddd7edd)
+
+## 0.10.6 (branch 0.10) done 
+
+---
