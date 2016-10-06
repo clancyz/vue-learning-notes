@@ -3934,3 +3934,193 @@ item.$compiler.observer.on('hook:afterDestroy', function () {
 要不一进来会是{{}}这种标签展示在界面上的话不太好看的嘛
 
 ---
+#### Make Observer emit `set` for all parent objects too [f2e32ab](https://github.com/vuejs/vue/commit/f2e32ab8ceec092e5f8acbc5c71358a1c1ec51e8)
+
+#### add tests for object outputing + avoid duplicate events [77ffd53](https://github.com/vuejs/vue/commit/77ffd53b6b0d1b0d964ab7192a1d7e59acaaddc0)
+
+---
+
+#### v-repeat optimization[9482e51](https://github.com/vuejs/vue/commit/9482e51250f9fe0a0e1a504143340d7920f7efc9)
+> - When the array is swapped, will reuse existing VM for any  element present in the old array. This greatly improves  performance when the repeated VMs have a complicated  nested structure themselves.
+> - Fixed issue when array is swapped new length is not emitted
+> - Fixed v-if not removing its reference comment node when unbound
+> - Fixed transition when element is invisible the transitionend  callback is never fired resulting in element stuck in DOM 
+
+这个厉害了：
+
+在array改变的时候执行update时会进行buildItem
+
+之前是全量地buildItem, 那么就需要全量地创建childvm
+
+现在在directive update时先存来一份: `this.oldVMs = this.vm`
+
+这样在buildItem时：
+
+```js
+ buildItem: function (data, index) {
+        ...
+        // append node into DOM first
+        // so v-if can get access to parentNode
+        if (data) {
+
+            if (this.old) {
+                i = this.old.indexOf(data)
+            }
+            
+            if (i > -1) { // existing, reuse the old VM
+
+                item = this.oldVMs[i]
+                // mark, so it won't be destroyed
+                item.$reused = true
+                el = item.$el
+                // don't forget to update index
+                data.$index = index
+                // existing VM's el can possibly be detached by v-if.
+                // in that case don't insert.
+                noInsert = !el.parentNode
+
+            }
+            ... 
+        }
+}
+```
+
+上面标记了一个$reused, 说明可以被复用；
+
+update => buildItem => 处理oldVM
+
+```js
+        // destroy unused old VMs
+        if (oldVMs) {
+            var i = oldVMs.length, vm
+            while (i--) {
+                vm = oldVMs[i]
+                if (vm.$reused) {
+                    vm.$reused = false
+                } else {
+                    vm.$destroy()
+                }
+            }
+        }
+```
+
+---
+
+#### v-repeat object first pass, value -> $value [393a4e2](https://github.com/vuejs/vue/commit/393a4e2cfa72ff6d9d91611edae52c579f214ed3)
+
+#### repeat object sync and tests [0e486a3](https://github.com/vuejs/vue/commit/0e486a30a26716fdc4d761a38e318de23e5fa8bb)
+
+对于v-repeat object,利用for in搞成array （这里定义成一个$repeater property,值是 array)
+
+在object更新时，$repeater array也进行更新 
+
+---
+
+#### sync back inline input value if initial data is undefined [31f3d65](https://github.com/vuejs/vue/commit/31f3d6598474fe7ae1d3f4bd9a87be66768b6b6d)
+
+举例：
+
+```
+<input type="checkbox" v-model="a">
+```
+
+在init的时候a是undefined的话，把checked属性置为html的默认值 
+
+---
+
+#### allow components to use plugins too, resolve Browserify Vue.require issue [74c03f3](https://github.com/vuejs/vue/commit/74c03f3e126050064755639700f632f6aacca4e5)
+
+ViewModel.use/require 挂到ExtendedVM上，任何vm(或者理解为components)都可以使用plugin
+
+```
+  // allow extended VM to use plugins
+   ExtendedVM.use     = ViewModel.use
+   ExtendedVM.require = ViewModel.require
+```
+
+---
+
+#### Internalize emitter implementation [3693ca7](https://github.com/vuejs/vue/commit/3693ca7f5265d1fdb48d8656160991e1ac023177)
+
+> This has a few benefits
+>
+> - no longer need to shiv the difference between Component's emitter  & Browserify's emitter (node version)
+> - no longer need to hack around Browserify's static require parsing> -able to drop methods not used in Vue
+> - able to add custom callback context control, as mentioned in #130 
+
+迟早要自己实现emitter的！ 写个emitter对尤大来说简直易如反掌...
+
+这样可以脱离这个Component的控制了，这东西(生态)后续也被证明是不成气候的
+
+---
+
+#### dataAttributes options (#125) [659593f](https://github.com/vuejs/vue/commit/659593f0e6fb0863b6029d7288788953ff4cc08a)
+
+这种paramAttributes声明方式又是迟早被干掉的节奏（剧透脸）
+
+```js
+describe('paramAttributes', function () {
+    it('should copy listed attributes into data and parse Numbers', function () {
+        var Test = Vue.extend({
+            template: '<div a="1" b="hello"></div>',
+            replace: true,
+            paramAttributes: ['a', 'b']
+        })
+        var v = new Test()
+        assert.strictEqual(v.a, 1)
+        assert.strictEqual(v.$data.a, 1)
+        assert.strictEqual(v.b, 'hello')
+        assert.strictEqual(v.$data.b, 'hello')
+    })
+
+})
+```
+
+---
+
+#### v-on delegation refactor, functional tests pass [60e5154](https://github.com/vuejs/vue/commit/60e5154715b03fc2bc6e302d65d882654738fe29)
+
+总体思路就是把事件代理到viewmodel的el上了
+
+触发时递归去找，找到了执行handler
+
+```js
+CompilerProto.addListener = function (listener) {
+    var event = listener.arg,
+        delegator = this.delegators[event]
+    if (!delegator) {
+        // initialize a delegator
+        delegator = this.delegators[event] = {
+            targets: [],
+            handler: function (e) {
+                var i = delegator.targets.length,
+                    target
+                while (i--) {
+                    target = delegator.targets[i]
+                    // 这里应该是target.el.contains(e.target)
+                    if (e.target === target.el && target.handler) {
+                        target.handler(e)
+                    }
+                }
+            }
+        }
+        this.el.addEventListener(event, delegator.handler)
+    }
+    delegator.targets.push(listener)
+}
+```
+
+---
+
+#### setTimeout(0) is faster than rAF [5100f3e](https://github.com/vuejs/vue/commit/5100f3ee0c93f18c2d9d8dde2273e16c4c6da5fe)
+
+前面的一个commit笔记  [c7b2d9c](https://github.com/vuejs/vue/commit/c7b2d9ca347ad8a3171fdb82cc1a2f343c92a07f)
+
+
+> 仍不知道作者使用setTimeout和requestAnimationFrame之间的标准。。
+
+从这个commit来看，还是速度上的考虑？
+
+---
+
+
