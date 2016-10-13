@@ -4443,3 +4443,18 @@ string转化成fragment的过程中，还有像Table,svg这样的东东
 ## 0.10.6 (branch 0.10) done 
 
 ---
+
+> 下面开始看1.0分支，因为0.10后的代码都在1.0分支中，commit超级多，但是...一步步慢慢看吧
+> 
+> 送佛送到西，计划是看到1.0发布, 略过bugfix和test, 主要以看思路为主
+
+#### working on new observer [b5bfc59](https://github.com/vuejs/vue/commit/b5bfc59a704f6d8e01b93352319b356b710ad850)
+
+新的observer的设计 
+
+设计思路：
+
+> 每个观察对象现在都具有Observer class; 它们现在首先是具有`Emmiter`的事件观察者功能，还可以彼此之间进行通信。
+
+
+
