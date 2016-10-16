@@ -23,13 +23,13 @@ Vue 在0.10.0分支共有737个commits, 历经时间 2013/7/29 - 2014/7/29（0.1
 
 ```
 src
-├── batcher.js
-├── binding.js
-├── compiler.js
-├── config.js
-├── deps-parser.js
-├── directive.js
-├── directives
+├── batcher.js // 用于批处理任务
+├── binding.js // 绑定基础类，用于处理ViewModel上的各属性，生成Binding
+├── compiler.js // DOM compiler
+├── config.js // 配置，如prefix,debug,interpolate等属性
+├── deps-parser.js // 依赖收集器 
+├── directive.js // 指令基础类
+├── directives // 内置指令
 │   ├── html.js
 │   ├── if.js
 │   ├── index.js
@@ -40,20 +40,94 @@ src
 │   ├── style.js
 │   ├── view.js
 │   └── with.js
-├── emitter.js
-├── exp-parser.js
-├── filters.js
-├── fragment.js
-├── main.js
-├── observer.js
-├── template-parser.js
-├── text-parser.js
-├── transition.js
-├── utils.js
-└── viewmodel.js
+├── emitter.js // 事件发射器
+├── exp-parser.js // 表达式parser，最终转义成可执行function
+├── filters.js // 内置filters
+├── fragment.js // fragment wrapper
+├── main.js // ViewModel的公共方法
+├── observer.js // 对象和数组 => Observerables
+├── template-parser.js // template string => dom fragment
+├── text-parser.js // 解析包含绑定的文本
+├── transition.js // 过渡系统
+├── utils.js // 工具函数
+└── viewmodel.js // 视图类，管理数据的状态，事件等。
 ```
 
 ## 主流程
+
+new Vue (options) => 
+    
+> util.processOptions()
+
+- 解析template  => template parser
+- 解析自定义filter => computed properties
+- 解析components => Viewmodel.extend()
+- 解析partials => template parser
+
+> 初始化compiler
+
+- vm, bindings, dirs, deferred, computed, children, emitter
+- compiler.setupElement(options)
+
+> 初始化vm
+
+- $el, $options, $compiler
+
+> 设置parentvm / root
+
+> 为生命周期钩子和data设置observer
+
+- observer为一个Emitter实例
+- 在`get/set/mutate`时添加监听器，onGet/onSet => compiler.createBinding(key)
+- 注册生命周期钩子
+
+> 处理options.methods
+
+- compiler.createBinding(key)
+
+> 处理options.computed 
+
+- compiler.createBinding(key)
+
+> 初始化data
+
+- copy paramAttributes 
+- copy data 到 vm, vm.$data = data
+
+> `beforeCompile` 钩子 compiler.exeHook('created')
+
+> 处理用户在`beforeCompile`中（可能）改变的data
+
+> 现在可以进行observeData了： compiler.observeData(data)
+
+- 递归地观察`nested properties`
+- 第一级的`$data` => new Binding(compiler, '$data') => update
+- $data可替换，也需要def(get,set)
+
+> 开始解析dom, 如果有options.template, 处理之
+
+> 解析dom和指令 compiler.compile(el, true)
+
+- this.compileElement(node, root)
+    - 有属性的node 或者是tagname带`-`的
+    - check directive 优先级
+    - parseDirective
+    - bindDirective
+- this.compileTextNode(node)
+
+> 开始处理有childVM的，这种被延迟处理（挂载在compiler.deferred）
+
+- compiler.bindDirective()
+
+> 依赖解析
+
+- DepsParser.parse(this.computed)
+    - getter trigger的时候，自动收集依赖
+
+> init Done 
+
+> 执行`ready`的生命周期钩子
+
 
 ## 主要技术难点
 
