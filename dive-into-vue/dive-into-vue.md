@@ -30,6 +30,16 @@
 
 MVVM框架可以很好地解决以上问题。通过 `ViewModel` 对 `View` 和 `Model` 进行桥接，而`Model` 和 `ViewModel` 之间的交互是双向的，`View` 数据的变化会同步到 `Model` 中，`Model` 中的数据变化也会立即反应到 `View` 上，即我们通常所说的「双向绑定」。这是不需要人为干涉的，所以开发者只需要关注业务逻辑，其他的DOM操作、状态维护等都由MVVM框架来实现。
 
+## Why Vue?
+
+Vue.js的优点主要体现在：
+
+- 开发者的上手成本很低，开发体验好 -- 如果使用过 `angular` 的同学就知道，里面的API多如牛毛，而且还会要求开发者去熟悉类似 `controller` , `directive` ， `dependency injection` , `digest cycle` 这些概念; `angular2` 更是需要提前去了解 `Typescript` 、`RxJS` 等基础知识； 要让一个前端小白去搞定 `React` 的全家桶，`ES6 + Babel` , `函数式编程` ，`JSX` ， `工程化构建` 这些也是必需要过的槛。`Vue.js` 就没有这些开发负担，让前端小白可以快速上手 -- 当然，对于有一定经验的同学，也可以使用流行的语言、框架、库、工程化工具来做自由合理搭配。 
+
+- 博采众长，集成各种优秀特性 -- `Vue.js` 里面有像 `angular` 这样的双向数据绑定，又提供了像 `React` 这样的 `JSX`, `Virtual-DOM` 的特性；同时 `vuex` ，`vue-router` ，`vue-cli` 等配套工具也组成了一个完整的框架生态。
+
+- 性能优秀。 `Vue.js` 在1.x版本的时候性能已经明显优于同期的 `angular 1.x` ；总体上来说，`Vue.js` 的性能与`React` 的性能在一个数量级，而且 `Vue.js` 不需要像`React` 那样去手动声明 `shouldComponentUpdate` 来优化状态变更时的重新渲染的性能。Vue2.0版本使用了`Virtual DOM + Dependency Tracking` 方案，性能得到进一步优化。当然，不分场景的性能比较属于耍流氓。 这个[benchmark](https://cdn.rawgit.com/krausest/js-framework-benchmark/b4b79ebb3c7db6e519fe3dbcc3cf43a21bbd8b1c/webdriver-java/table.html) 对比了主流前端框架的性能，可以看出 `Vue.js` 的性能在大部分场景下都属于业界顶尖。
+
 ## Vue.js的绑定设计思路
 
 根据上面篇幅的描述，MVVM框架工作的重中之重是建立 `View` 和 `Model` 之间的关系。也就是「绑定」。官方文档的附图说明了这一点：
