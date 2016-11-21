@@ -4,7 +4,7 @@
 
 自2013年以来，`Vue.js` 通过其可扩展的数据绑定机制、极低的上手成本、简洁明了的API、高效完善的组件化设计等特性，吸引了越来越多的开发者。在github上已经有30,000+ star，且不断在增长；在国内外都有广泛的应用，社区和配套工具也在不断完善，影响力日益扩大，与 `React` 、`AngularJS` 这种「世界级框架」几乎平起平坐。 
 
-外卖B端的FE同学比较早（0.10.x版本）就引入了 `Vue.js` 进行业务开发，经过一年多的实践，积累了一定的理解。在此基础上，我们希望去更深入地了解 `Vue.js` , 而不是一直停留在表面。所以「阅读源码」成为了一项课外任务。
+外卖的FE同学比较早（0.10.x版本）就引入了 `Vue.js` 进行业务开发，经过一年多的实践，积累了一定的理解。在此基础上，我们希望去更深入地了解 `Vue.js` , 而不是一直停留在表面。所以「阅读源码」成为了一项课外任务。
 
 我个人从9月份开始阅读Vue的源码，陆陆续续看了2个月，[这里](https://github.com/clancyz/vue-learning-notes)是我的源码学习笔记。本篇文章希望从 `Vue.js`  1.0版本的设计和实现为主线，阐述自己阅读源码的一些心得体会。
 
@@ -362,6 +362,7 @@ return o.list[0].text
 
 
 > **扩展**
+> 
 > `Vue.js` 的状态机设计可以看勾三股四总结的[这张图](http://img2.tbcdn.cn/L1/461/1/3acfc1236df2d6cd068dd8540e0b0baeb4b8916b)。
 
 ### 缓存系统
@@ -393,6 +394,7 @@ return o.list[0].text
 
 
 > **扩展**
+> 
 > 缓存系统的其他实现，可以参考wikipedia上的[Cache replacement policies](https://en.wikipedia.org/wiki/Cache_replacement_policies)。
 
 ## 依赖收集 (Dependency Collection)
